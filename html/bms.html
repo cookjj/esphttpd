@@ -1,0 +1,55 @@
+<html><head><title>Test</title>
+<meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"> 
+<link rel="stylesheet" type="text/css" href="style.css">
+<script type="text/javascript">
+
+    function bmsProcessFunct(tree) {
+        var arr = tree.bms_values;
+
+        var i;
+        for(i = 0; i < arr.length; i++) {
+            document.getElementById("log2").innerHTML = "processing cgi datas";
+            var el = document.getElementById("bms-val-"+i);
+            el.innerHTML = 'offset: ' + arr[i].word_ofst + ' with value: ' + arr[i].word_val.toString(16);
+        }
+    }
+
+    function bmsDataQuery() {
+        var xmlhttp = new XMLHttpRequest();
+        var url = "/bms.cgi";
+
+        xmlhttp.onreadystatechange = function() {
+            document.getElementById("log").innerHTML = "got cgi data back";
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var jjt = JSON.parse(xmlhttp.responseText);
+                bmsProcessFunct(jjt);
+            }
+        };
+
+        xmlhttp.open("POST", url);
+        xmlhttp.send();
+    }
+
+    function bmsInit() {
+        bmsDataQuery();
+        setInterval(function(){ bmsDataQuery() }, 2000);
+    }
+
+</script>
+</head>
+<body onload="bmsInit()">
+<div id="main">
+<h1>The BMS</h1>
+<p>
+<div id="bms-val-0"></div>
+<div id="bms-val-1"></div>
+<div id="bms-val-2"></div>
+<div id="bms-val-3"></div>
+<div id="bms-val-4"></div>
+<br>
+<div id="log"></div>
+<div id="log2"></div>
+</p>
+</div>
+</body></html>
+
