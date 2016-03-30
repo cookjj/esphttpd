@@ -45,3 +45,5 @@ void stdoutInit() {
 	//Install our own putchar handler
 	os_install_putc1((void *)stdoutPutchar);
 }
+
+

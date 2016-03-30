@@ -5,6 +5,9 @@
 
 int cgiLed(HttpdConnData *connData);
 int tplLed(HttpdConnData *connData, char *token, void **arg);
+int cgiBms(HttpdConnData *connData);
+
 int tplCounter(HttpdConnData *connData, char *token, void **arg);
 
 #endif
+

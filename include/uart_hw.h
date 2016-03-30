@@ -6,6 +6,7 @@
 
 #ifndef UART_REGISTER_H_INCLUDED
 #define UART_REGISTER_H_INCLUDED
+
 #define REG_UART_BASE( i )  (0x60000000+(i)*0xf00)
 //version value:32'h062000
 
@@ -125,7 +126,6 @@
 
 #define UART_DATE( i )                          (REG_UART_BASE( i ) + 0x78)
 #define UART_ID( i )                            (REG_UART_BASE( i ) + 0x7C)
-#endif // UART_REGISTER_H_INCLUDED
 
 #define RX_BUFF_SIZE    256
 #define TX_BUFF_SIZE    100
@@ -192,4 +192,53 @@ typedef enum {
     RCV_MSG_BODY,
     RCV_ESC_CHAR,
 } RcvMsgState;
+
+
+typedef struct {
+    uint32     RcvBuffSize;
+    uint8     *pRcvMsgBuff;
+    uint8     *pWritePos;
+    uint8     *pReadPos;
+    uint8      TrigLvl; //JLU: may need to pad
+    RcvMsgBuffState  BuffState;
+} RcvMsgBuff;
+
+
+typedef struct {
+    UartBautRate         baut_rate;
+    UartBitsNum4Char  data_bits;
+    UartExistParity      exist_parity;
+    UartParityMode      parity;    // chip size in byte
+    UartStopBitsNum   stop_bits;
+    UartFlowCtrl         flow_ctrl;
+    RcvMsgBuff          rcv_buff;
+    TrxMsgBuff           trx_buff;
+    RcvMsgState        rcv_state;
+    int                      received;
+    int                      buff_uart_no;  //indicate which uart use tx/rx buffer
+} UartDevice;
+
+
+typedef void (*uart0_data_received_callback_t)(uint8_t *data,int len);
+
+
+#define UART_HW_RTS   0   //set 1: enable uart hw flow control RTS, PIN MTDO, FOR UART0
+#define UART_HW_CTS  0    //set1: enable uart hw flow contrl CTS , PIN MTCK, FOR UART0
+
+#define UART_PARITY_EN_M                0x00000001
+#define UART_PARITY_EN_S                 1
+#define UART_PARITY_M                       0x00000001
+#define UART_PARITY_S                        0
+
+
+
+void ICACHE_FLASH_ATTR uart_config(uint8_t uart_no);
+void uart_init(UartBautRate uart0_br, UartBautRate uart1_br);
+
+void uart_clear_data_callback();
+void uart_register_data_callback(uart0_data_received_callback_t callback);
+
+
+#endif // UART_REGISTER_H_INCLUDED
+
 

@@ -27,6 +27,8 @@ some pictures of cats.
 #include "webpages-espfs.h"
 #include "cgiwebsocket.h"
 #include "cgi-test.h"
+#include "uart_hw.h"
+#include "cgi_bms.h"
 
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
 //#define SHOW_HEAP_USE
@@ -125,6 +127,7 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/led.tpl", cgiEspFsTemplate, tplLed},
 	{"/index.tpl", cgiEspFsTemplate, tplCounter},
 	{"/led.cgi", cgiLed, NULL},
+	{"/bms.cgi", cgiBms, NULL},
 	{"/flash/download", cgiReadFlash, NULL},
 #ifdef INCLUDE_FLASH_FNS
 	{"/flash/next", cgiGetFirmwareNext, &uploadParams},
@@ -165,6 +168,7 @@ static void ICACHE_FLASH_ATTR prHeapTimerCb(void *arg) {
 }
 #endif
 
+
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
 void user_init(void) {
 	stdoutInit();
@@ -188,8 +192,14 @@ void user_init(void) {
 	os_timer_setfn(&websockTimer, websockTimerCb, NULL);
 	os_timer_arm(&websockTimer, 1000, 1);
 	os_printf("\nReady\n");
+
+    uart_init(BIT_RATE_57600, BIT_RATE_57600);
+    uart_register_data_callback(bms_rx_data);
+
+    return;
 }
 
 void user_rf_pre_init() {
 	//Not needed, but some SDK versions want this defined.
 }
+

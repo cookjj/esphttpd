@@ -15,6 +15,7 @@ flash as a binary. Also handles the hit counter on the main page.
 
 #include <esp8266.h>
 #include "cgi.h"
+#include "cgi_bms.h"
 #include "io.h"
 
 
@@ -59,6 +60,53 @@ int ICACHE_FLASH_ATTR tplLed(HttpdConnData *connData, char *token, void **arg) {
 	httpdSend(connData, buff, -1);
 	return HTTPD_CGI_DONE;
 }
+
+
+
+int ICACHE_FLASH_ATTR
+cgiBms(HttpdConnData *connData) {
+	int len;
+	char buff[1024];
+
+	if (connData->conn==NULL) {
+		//Connection aborted. Clean up.
+		return HTTPD_CGI_DONE;
+	}
+
+
+    httpdStartResponse(connData, 200);
+    httpdHeader(connData, "Content-Type", "text/json");
+    httpdEndHeaders(connData);
+
+    /* {
+        "bms_values": [
+            {
+                "word_ofst" : 0,
+                "word_val": 1234
+            },
+        ]
+    } */
+
+    len = sprintf(buff, "{ \"bms_values\": [" \
+            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
+            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
+            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
+            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
+            "{ \"word_ofst\" : %d, \"word_val\": %d }" \
+        "] }",
+        0, bms_value_get(0),
+        1, bms_value_get(1),
+        2, bms_value_get(2),
+        3, bms_value_get(3),
+        4, bms_value_get(4));
+
+    printf("Sennding BMS cgi datas!\n");
+
+    httpdSend(connData, buff, len);
+
+	return HTTPD_CGI_DONE;
+}
+
 
 static long hitCounter=0;
 
