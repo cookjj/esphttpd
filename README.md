@@ -84,8 +84,8 @@ You can also edit the Makefile to change this more permanently.
 After the compile process, flash the code happens in 2 steps. First the code itself gets flashed. Reset the module into bootloader
 mode and enter 'make flash'.
 
-The 2nd step is to pack the static files the webserver will serve and flash that. Reset the module into
-bootloader mode again and enter `make htmlflash`.
+~~The 2nd step is to pack the static files the webserver will serve and flash that. Reset the module into
+bootloader mode again and enter `make htmlflash`. DEPRECATED-by-jjc~~
 
 You should have a working webserver now.
 
