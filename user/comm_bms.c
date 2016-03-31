@@ -5,36 +5,48 @@
 #include "httpd.h"
 #include "io.h"
 
+/* this attribute is essential for the serial ISR */
 #define ICACHE_STORE_ATTR __attribute__((aligned(4)))
 
 
-/* How many paramRAM data words we deal with */
-#define BMS_DATA_PARM_VALS_NUMEL 5
+/* How many param data _words_ we can deal with max */
+#define BMS_DATA_PARM_VALS_MAX 60
 
 /* 2 bytes per word and 2 chars per byte in serial ascii received data */
-#define EXPECTED_DATA_LEN_BYTES (BMS_DATA_PARM_VALS_NUMEL * 4)
+#define MAX_DATA_LEN_BYTES (BMS_DATA_PARM_VALS_MAX * 4)
 
-/* Double buffer of paramRAM data words */
-uint16_t ICACHE_STORE_ATTR paramRAM_values[2][BMS_DATA_PARM_VALS_NUMEL] = { { 5,6,7,8,9 }, { 55,66,77,88,99 } };
+/* Double buffer of param data words */
+uint16_t ICACHE_STORE_ATTR param_values[2][BMS_DATA_PARM_VALS_MAX];
 
 #define RX_SOT '<' /* start of text for serial protocol */
 #define RX_EOT '>' /* end of text for serial protocol */
 
-static uint8_t the_good_buffer = 0; /* 0 or 1 for which paramRAM_values buffer is complete */
+static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is complete */
+static uint8_t actual_numel[2] = {0}; /* actual num elements in buf 0, 1 */
 
-uint8_t hexchar_to_nyb(uint8_t);
-void convert_rx_to_bin_and_store(uint8_t *, uint8_t);
+#define ARRAY_OFST_WIFI_CFG 0 /* 0th byte in message array for wifi options */
 
+
+uint8_t static hexchar_to_nyb(uint8_t);
+void static convert_rx_to_bin_and_store(uint8_t *, uint8_t);
+
+
+
+uint8_t ICACHE_FLASH_ATTR
+bms_numel_get(void)
+{
+    return actual_numel[the_good_buffer];
+}
 
 uint16_t
 ICACHE_FLASH_ATTR 
 bms_value_get(uint8_t wordno)
 {
-    if(wordno > BMS_DATA_PARM_VALS_NUMEL) {return 0;}
+    if(wordno > BMS_DATA_PARM_VALS_MAX) {return 0;}
     if(the_good_buffer == 0) {
-        return paramRAM_values[0][wordno];
+        return param_values[0][wordno];
     } else {
-        return paramRAM_values[1][wordno];
+        return param_values[1][wordno];
     }
 }
 
@@ -72,20 +84,19 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
     // and not the valid one which may be read out to web by cgi.
     if(the_good_buffer == 0) {
         dirty_buffer = 1;
-        //printf("BMS: convert: choosing dirty buffer 1");
     } else {
-        //printf("BMS: convert: choosing dirty buffer 0");
         dirty_buffer = 0;
     }
 
     parm_vals_idx = 0;
-    for(i = 0; i < len; i += 4) { // increment 4 chars for 4 nybbled for i word
+
+    for(i = 0; i < len; i += 4) { // increment 4 chars for 4 nybbles for i word
         uint16_t build_a_word; // we'll construct saved word here
         uint8_t nybble; // temporary
 
-        if(parm_vals_idx >= BMS_DATA_PARM_VALS_NUMEL) {
+        if(parm_vals_idx >= BMS_DATA_PARM_VALS_MAX) {
             // Break from loop to avoid overflow buffer if
-            // we've gone past the end of paramRAM_values
+            // we've gone past the end of param_values
             break;
         }
 
@@ -104,9 +115,10 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
         nybble = hexchar_to_nyb(buf[i+3]);
         build_a_word |= (uint16_t)nybble;   // OR least signif nybble
 
-        paramRAM_values[dirty_buffer][parm_vals_idx] = build_a_word;
+        param_values[dirty_buffer][parm_vals_idx] = build_a_word;
         parm_vals_idx++; // increase to next position to write
     }
+    actual_numel[dirty_buffer] = parm_vals_idx;
 
     /* Switch the_good_buffer to the freshly written one;
      * This should be the only place it is modified,
@@ -122,13 +134,13 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
 
 
 
-
+#if 0
     /* misc stuff on get good data */
     uint8_t mod;
     uint16_t batt_number;
     char batt_ssid_name[32];
 
-    batt_number = paramRAM_values[the_good_buffer][0];
+    batt_number = param_values[the_good_buffer][0];
 
     /* create standard name based on received batt_number */
     sprintf(batt_ssid_name, "Batt_%d", batt_number);
@@ -144,6 +156,7 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
             wifi_station_set_hostname(batt_ssid_name);
         }
     }
+#endif
 
 #if 0
     struct softap_config c;
@@ -168,7 +181,7 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
 void
 bms_rx_data(uint8_t *data, int len)
 {
-    static uint8_t rx_buf[64];  /* Serial protocol receive buffer. Only data text and not text control values are stored */
+    static uint8_t rx_buf[256];  /* Serial protocol receive buffer. Only data text and not text control values are stored */
     static uint8_t rx_idx = 0;  /* byte count for stored data text values in rx_buf */
     static uint8_t got_eot = 0; /* flag if EOT char has been received */
     static uint8_t check;       /* xor additive checksum of rx_buf bytes */
@@ -197,7 +210,7 @@ bms_rx_data(uint8_t *data, int len)
 
                     // Store, add to checksum, increment buffer index; conversion on full message rxd.
                     // Only increment to last valid place
-                    if(rx_idx < EXPECTED_DATA_LEN_BYTES) {
+                    if(rx_idx < MAX_DATA_LEN_BYTES) {
                         check ^= data[i];
                         rx_buf[rx_idx] = data[i];
                         rx_idx++;
@@ -212,11 +225,22 @@ bms_rx_data(uint8_t *data, int len)
                 }
             } else { // got end of text, this must be check byte
                 //printf("BMS: Getting check byte");
+
+                if(data[i] == check) { // and good check sum
+                    // convert ascii to binary and copy from rx_buf
+                    // to param buffer; switch good buffer.
+                    // note that we send rx_buf, rx_idx,
+                    // and definitely not the partial message loop parameters data,len
+                    printf("Good check.\n");
+                    convert_rx_to_bin_and_store(rx_buf, rx_idx);
+                }
+
+#if 0
                 if(rx_idx == EXPECTED_DATA_LEN_BYTES) { // and enough data bytes came in
                     //printf("BMS: got expected data len");
                     if(data[i] == check) { // and good check sum
                         // convert ascii to binary and copy from rx_buf
-                        // to paramRAM buffer; switch good buffer.
+                        // to param buffer; switch good buffer.
                         // note that we send rx_buf, rx_idx,
                         // and definitely not the partial message loop parameters data,len
                         printf("Good check.\n");
@@ -229,6 +253,7 @@ bms_rx_data(uint8_t *data, int len)
                     // bad: nothing will happen until SOT again
                     //printf("BMS: got unexpected data len, try again!");
                 }
+#endif
             }
         }
     }
