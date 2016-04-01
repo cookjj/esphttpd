@@ -28,7 +28,7 @@ some pictures of cats.
 #include "cgiwebsocket.h"
 #include "cgi-test.h"
 #include "uart_hw.h"
-#include "cgi_bms.h"
+#include "comm_bms.h"
 
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
 //#define SHOW_HEAP_USE
@@ -122,7 +122,7 @@ should be placed above the URLs they protect.
 */
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
-	{"/", cgiRedirect, "/index.tpl"},
+	{"/", cgiRedirect, "/lgui/index.html"},
 	{"/flash.bin", cgiReadFlash, NULL},
 	{"/led.tpl", cgiEspFsTemplate, tplLed},
 	{"/index.tpl", cgiEspFsTemplate, tplCounter},

@@ -15,7 +15,7 @@ flash as a binary. Also handles the hit counter on the main page.
 
 #include <esp8266.h>
 #include "cgi.h"
-#include "cgi_bms.h"
+#include "comm_bms.h"
 #include "io.h"
 
 
@@ -65,8 +65,9 @@ int ICACHE_FLASH_ATTR tplLed(HttpdConnData *connData, char *token, void **arg) {
 
 int ICACHE_FLASH_ATTR
 cgiBms(HttpdConnData *connData) {
-	int len;
+	int len_tot;
 	char buff[1024];
+    char single_val_buf[8];
 
 	if (connData->conn==NULL) {
 		//Connection aborted. Clean up.
@@ -78,33 +79,27 @@ cgiBms(HttpdConnData *connData) {
     httpdHeader(connData, "Content-Type", "text/json");
     httpdEndHeaders(connData);
 
-    /* {
-        "bms_values": [
-            {
-                "word_ofst" : 0,
-                "word_val": 1234
-            },
-        ]
-    } */
+    /* new JSON structure:
+     * { "bms_values" : [ 5, 6, 7, 8, 999 ] }
+     */
+    len_tot = sprintf(buff, "{\"bms_values\":[");
+    int i, numel;
+    numel = bms_numel_get();
+    for(i = 0; i < numel - 1; i++) {
+        len_tot += sprintf(single_val_buf, "%d,", bms_value_get(i));
+        strcat(buff, single_val_buf);
+    }
+    if(numel > 1) {
+        // no comma after printed number for last element.
+        len_tot += sprintf(single_val_buf, "%d", bms_value_get(numel-1));
+        strcat(buff, single_val_buf);
+    }
+    len_tot += sprintf(single_val_buf, "]}");
+    strcat(buff, single_val_buf);
 
-    len = sprintf(buff, "{ \"bms_values\": [" \
-            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
-            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
-            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
-            "{ \"word_ofst\" : %d, \"word_val\": %d }," \
-            "{ \"word_ofst\" : %d, \"word_val\": %d }" \
-        "] }",
-        0, bms_value_get(0),
-        1, bms_value_get(1),
-        2, bms_value_get(2),
-        3, bms_value_get(3),
-        4, bms_value_get(4));
-
-    printf("Sennding BMS cgi datas!\n");
-
-    httpdSend(connData, buff, len);
-
-	return HTTPD_CGI_DONE;
+    printf("Sennding BMS cgi datas of len %d: ...%s...\n", len_tot, buff);
+    httpdSend(connData, buff, len_tot);
+    return HTTPD_CGI_DONE;
 }
 
 

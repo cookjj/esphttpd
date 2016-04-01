@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Elithion Lithiumate WiFi</title>
+	<title>Elithion Vinci BMS</title>
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black"'>
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
@@ -105,7 +105,7 @@
 		div.roundMeterValLabel10 {left:52px;top:107px;text-align:right;}
 		div.roundMeterEndLabel {font-size:0.6em;}
 
-		canvas.needleCanvas { /* Are in which we tranform and display the needle inside a round meter */
+		canvas.needleCanvas { /* Area in which we tranform and display the needle inside a round meter */
 			z-index:4;
 			position:absolute;
 			top:24px;
@@ -279,101 +279,20 @@
 
 	<script type="text/javascript" charset="utf-8"> // Update main screen
 		
+		// <<< TEST
 
+		// Status flags
+		// bit 0: Main power (ignition): r_a_status_flags, a_main_sply_fl
+		// bit 1: Charger power: r_a_status_flags, a_chgr_sply_fl
+		// bit 2~7: reserved
+			
 		
 		// CONSTANTS
-		var GUI_Rev = '1.03, Feb 11 2014';
+		var GUI_Rev = '0.1, Mar 31 2016';
 
 		// URLs and paths
-		var LithiumateDataPath = 'lithiumatedata.html'; 
-		//NOTE! This will only work on browsers in external devices. 
-		// The browser within this Raspberry Pi will not be able to access this file, 
-		// because it's local, and ajax requests must go to be through http. 
-		// Something like this, but not quite, might work: 'http://localhost/10.1.1.1/lithiumatedata.html';
+		var LithiumateDataPath = 'lithiumatedata.html'; // <<< Eliminate 
 		var IE_HackPath = '?IE_hack='; // Hack to make it work in IE: by changing the URL each time, we keep IE from caching it
-
-		// Data extraction: location (hex) Lite and Pro, number of bytes, conversion factor, offset
-		// Constants
-		var HdwrRevX         = ['00', '00', 1,   1, 0]; // Hardware revision level
-		var SfwrRevX         = ['01', '01', 2,   1, 0]; // Software revision level
-		var SerialNoX        = ['03', '03', 2,   1, 0]; // Serial number
-		// Variables, Lite and Pro
-		var PowerCycleNo2X   = ['01', '01', 2,   1, 0]; // Number of on/off cycles [-] 
-		var PwrUpTimer3X     = ['03', '03', 3,   1, 0]; // Time since power came on [s] 
-		var IoStateX         = ['0A', '0A', 1,   1, 0]; // State of certain inputs and outputs 
-		var RelCCLX          = ['0B', '0B', 1,   1, 0]; // Relative Charge Current Limit (CCL): Maximum regen and charging current accepted. FFh = 100%, 00h = 0% [-] 
-		var RelDCLX          = ['0C', '0C', 1,   1, 0]; // Relative Discharge Current Limit (DCL): Maximum discharging current accepted. FFh = 100%, 00h = 0% [-]
-		var StateOfChargeX   = ['0E', '0E', 1, 0.5, 0]; // State Of Charge [0.5%] 
-		var PackVoltage2X    = ['0F', '0F', 2, 0.1, 0]; // Pack total voltage, 0 to 6.55 kV [100 mV]
-		var MissBanksCodeX   = ['11', '11', 1,   1, 0]; // No of a bank missing (high nybble) / No of missing banks (low nybble)
-		var NoOfMissCellsX   = ['12', '12', 1,   1, 0]; // No of missing cells
-		var MissCellNoX      = ['13', '13', 1,   1, 0]; // No of a missing cell
-		var MinCellVtgX      = ['14', '14', 1,0.01, 2]; // Minimum Cell Block Voltage [V]
-		var MinVtgCellNoX    = ['15', '15', 1,   1, 0]; // Number of the Cell with the lowest Voltage [-] {Rev 1.02 was '17' for the Lite}
-		var AvgCellVtgX      = ['16', '16', 1,0.01, 2]; // Average Cell Block Voltage [V] {Rev 1.02 was '15' for the Lite}
-		var MaxCellVtgX      = ['17', '17', 1,0.01, 2]; // Maximum Cell Block Voltage [V] {Rev 1.02 was '16' for the Lite}
-		var MaxVtgCellNoX    = ['18', '18', 1,   1, 0]; // Number of the Cell with the highest Voltage [-]
-		var MinCellTmpX      = ['19', '19', 1,   1, -128]; // Minimum Cell Temperature [¡C]
-		var MinTmpCellNoX    = ['1A', '1A', 1,   1, 0]; // Number of the Cell with the lowest Temperature [-] {Rev 1.02 was '1C' for the Lite}
-		var AvgCellTmpX      = ['1B', '1B', 1,   1, -128]; // Average Cell Temperature [¡C] {Rev 1.02 was '1A' for the Lite}
-		var MaxCellTmpX      = ['1C', '1C', 1,   1, -128]; // Maximum Cell Temperature [¡C] {Rev 1.02 was '1B' for the Lite}
-		var MaxTmpCellNoX    = ['1D', '1D', 1,   1, 0]; // Number of the Cell with the highest Temperature [-]
-		var NoOfLoadsOnX     = ['1E', '1E', 1,   1, 0]; // Number of loads that are on
-		var LoadOnVtgX       = ['1F', '1F', 1,0.01, 2]; // Cell voltage above which we turn on its load [10 mV - 2.0 V]
-		var CclLimitCauseX   = ['24', '39', 1,   1, 0]; // Code for what is limiting the CCL
-		var DclLimitCauseX   = ['25', '3A', 1,   1, 0]; // Code for what is limiting the DCL
-		var BalDisabCauseX   = ['26', '3B', 1,   1, 0]; // Code for what is turning off balance
-		var NoOfSeriesCellsX = ['27', '4D', 1,   1, 0]; // Number of cells in series
-		var MinCellResX      = ['38', '32', 1, 0.1, 0]; // Minimum Cell Block Resistance [100 uOhm]
-		var AvgCellResX      = ['39', '33', 1, 0.1, 0]; // Average Cell Block Resistance [100 uOhm]
-		var MaxCellResX      = ['3A', '34', 1, 0.1, 0]; // Maximum Cell Block Resistance [100 uOhm]
-		var MinResCellNoX    = ['3B', '35', 1,   1, 0]; // Number of the Module with the lowest Resistance [-]
-		var MaxResCellNoX    = ['3C', '36', 1,   1, 0]; // Number of the Module with the highest Resistance [-]
-		var PackResistance2X = ['3D', '37', 2, 0.1, 0]; // Total pack resistance [100 uOhm]
-		var PackCurrentX     = ['3F', '28', 2, 0.1, 0]; // Total Pack current (system plus charge) [100 mA], positive when discharging +/- 3.2 KA max 
-		// Variables, Lite only
-		var FaultFlags2X     = ['20', '  ', 2,   1, 0]; // Flags for Faults. These get cleared if the fault is over (as opposed to the faultCode, which is never cleared)
-		var WarningFlags2X   = ['22', '  ', 2,   1, 0]; // Warning flags
-		// Variables, Pro only
-		var ExtFlags         = ['  ', '20', 1, 1, 0]; // Externally avaliable flags
-		var OutFlags         = ['  ', '21', 1, 1, 0]; // Flags that control the outputs 
-		var LvlFaultFlags    = ['  ', '22', 1, 1, 0]; // Fault flags for level faults (as opposed do transition faults). These get cleared if the fault is over (as opposed to the faultCode, which is never cleared)
-		var WarningFlags     = ['  ', '23', 1, 1, 0]; // Warning flags
-		var AvgMinCellVtg2   = ['  ', '24', 2, 1, 0]; // Time average of the IR compensated Minimum Cell Voltage. High byte: [10 mV - 2.0 V]
-		var AvgMaxCellVtg2   = ['  ', '26', 2, 1, 0]; // Time average of the IR compensated Maximum Cell Voltage. High byte: [10 mV - 2.0 V]
-		var InstSrcCurr2     = ['  ', '2A', 2, 1, 0]; // Instantaneous Source current [100 mA], positive when discharging
-		var InstLodCurr2     = ['  ', '2C', 2, 1, 0]; // Instantaneous Load current [100 mA], positive when discharging
-		var AvgMinCellTmp2   = ['  ', '2E', 2, 1, 0]; // Time average of the Minimum Cell Board Temperature. High byte:  [¡C +80h]
-		var AvgMaxCellTmp2   = ['  ', '30', 2, 1, 0]; // Time average of the Maximum Cell Board Temperature. High byte:  [¡C +80h]
-		var InstPower2       = ['  ', '3C', 2, 1, 0]; // Instantaneous Power [100 W], positive when discharging, 3.2 MW max
-		var TotEnergyIn5     = ['  ', '3E', 5, 1, 0]; // Total energy in [kWh/10000h]
-		var TotEnergyOut5    = ['  ', '43', 5, 1, 0]; // Total energy out [kWh/10000h]
-		var DepthOfDisch5    = ['  ', '48', 5, 1, 0]; // Depth Of Discharge: integral of pack current. Two high bytes: [Ah]. 0 to 65 kAh
-		var StateOfHealth    = ['  ', '4E', 1, 1, 0]; // State Of Health [%]
-		var BankStatus16     = ['  ', '4F',16, 1, 0]; // Bank Status Array: number of cell in the bank (when learning); number of missing cells (during normal operation); cleared if OK, -1 if no communications
-		var CanContReqTmr    = ['  ', '5F', 1, 1, 0]; // Time Out Timer for commands for the contactors; 0 = Time-out [100 ms]
-		var CanSrceCurrTmr   = ['  ', '60', 1, 1, 0]; // Time Out Timer for CAN messages with the source current; 0 = Time-out [100 ms]
-		var CanLoadCurrTmr   = ['  ', '61', 1, 1, 0]; // Time Out Timer for CAN messages with the load current; 0 = Time-out [100 ms]
-		var CanHvfeStatTmr   = ['  ', '62', 1, 1, 0]; // Time Out Timer for CAN messages with the HVFE status; 0 = Time-out [100 ms]
-		var CompenCellRes    = ['  ', '63', 1, 1, 0]; // Nominal cell resistance, compensated for temperature and SOC [100 uOhm]
-		var MonitoredCell    = ['  ', '64', 1, 1, 0]; // Number of the cell being monitored in the GUI. Its value is set by the GUI
-		var AltPackVoltage2  = ['  ', '65', 2, 1, 0]; // Alternate Pack Voltage (from the HVFE or the sum of cell voltages, whichever method is not used by packVoltage; PackVtgHVFEBit specifies which method), 0 to 6.55 kV [100 mV]
-
-		// Cell voltages, temperatures, resistances
-		var CellVtgsX        = [0.01, 2]; // Set of all cell voltages
-		var CellTempX        = [1, -128]; // Set of all temperatures
-		var CellResX         = [0.1, 0]; // Set of all resistances
-
-		// Data extraction: location (hex) Lite and Pro, number of bytes, conversion factor, offset
-		// Settings
-		var VCellMinX	= ['26', '6A', 1,   0.01, 2]; // Setting for V-cell-min 
-		var VCellLowX	= ['27', '6B', 1,   0.01, 2]; // Setting for V-cell-low 
-		var VCellHiX	= ['28', '6C', 1,   0.01, 2]; // Setting for V-cell-high 
-		var VCellMaxX	= ['29', '6D', 1,   0.01, 2]; // Setting for V-cell-max 
-		var TemperMinX	= ['32', '76', 1,     1, -128]; // Setting for Temperature-min 
-		var TemperLowX	= ['33', '77', 1,     1, -128]; // Setting for Temperature-low 
-		var TemperHiX	= ['34', '78', 1,     1, -128]; // Setting for Temperature-high 
-		var TemperMaxX	= ['35', '79', 1,     1, -128]; // Setting for Temperature-max 
 		
 		// Ranges
 		var TopTemper = 70; 
@@ -383,10 +302,8 @@
 
 		// Cause codes
 		var NoBalanceCauses = ['Hot cell board','All within delta bal vtg','All below min bal vtg','Cool down period','Not AC powered'];
-		var LiteWarnFaultStrings = ['Charge overcurrent','Discharge overcurrent','Cold temperature','Hot temperature','Low cell voltage','High cell voltage','Plug &amp; drive','Bank communication fault','BMS test - charger','BMS test - load','BMS test - regen','BMS test - charger sensor reversed','BMS test - load sensor reversed','BMS test - no cells','Stack overflow'];
-		var LiteLimitCauseStrings = ['No limit','Pack voltage too low','Pack voltage too high','Cell voltage low','Cell voltage high','Temperature too high for charging','Temperature too low for charging','Temperature too high for discharging','Temperature too low for discharging','Charging current peak lasted too long','Discharging current peak lasted too long','Charge testing','Fault'];
-		var ProWarnStrings = ['Under voltage','Over voltage','Over charge current','Over discharge current','Cold temperature','Hot temperature','SOH is low','Isolation fault'];
-		var ProFaultStrings = ['Plug &amp; drive','Interlock','Communication fault','Charge overcurrent','Discharge overcurrent','Over-temperature','Under voltage','Over voltage'];
+		var WarnStrings = ['Under voltage','Over voltage','Over charge current','Over discharge current','Cold temperature','Hot temperature','SOH is low','Isolation fault'];
+		var FaultStrings = ['Plug &amp; drive','Interlock','Communication fault','Charge overcurrent','Discharge overcurrent','Over-temperature','Under voltage','Over voltage'];
 
 		// Histogram
 		var HistogramWidth = 450; // Easier than trying to extract the width from the style
@@ -423,22 +340,14 @@
 		var SOC_Color = [238,130,238]; // SOC - violet
 
 		// Strings
-		var LithiumateLite = 'Lithiumate Lite';
-		var LithiumatePro = 'Lithiumate Pro';
+		var VinciBmsStr = 'Vinci BMS';
 		var PowerOff = 'BMS power off';
-		var UsbDisconnected = 'USB disconnected';
 		var NoDataFile = 'No data file';
-		var BootlegCopy = 'Bootleg copy';
 
 		// Times and rates
 		var OneSecRate = 1000; // ms
 		var RefreshRate = 333; // ms {Rev 1.01 was 300; 330 prevents getting stuck in a pattern when the python script and this file are in synch and continuously miss data}
 		var BlinkDuration = 50; // ms
-
-		// Misc
-		var MaxChargerCurr = 30; // A
-		var MaxLoadCurr = 900; // A
-		var LiteSettingsMaxLength = 250; // Threshold on the length of the settings string, blow which we assume it's a Lite, above which we assume it's a Pro
 
 
 		// VARIABLES
@@ -460,7 +369,6 @@
 		var resistanceData = '';
 		var clockData = '';
 		// Settings from the BMS
-		var isLite = false;
 		var minCellVtgStng = 0;
 		var lowCellVtgStng = 0;
 		var hiCellVtgStng = 0;
@@ -475,12 +383,18 @@
 		var maxCellVtg = 0;
 		var minCellTmp = 0;
 		var maxCellTmp = 0;
+		var sfwrRevLevel = 0;
+		var hdwrRevLevelChar = '';
+		var hdwrSN = 0;
+		var newNoOfSeriesCells = 0;
+		var powerCycleNo2 = 0;
+		var pwrUpTimer3 = 0;
 		var stateOfCharge = -1;
 		var packCurrent = -10000;
 		var packVoltage = -1;
 		var packPower = 0;
 		var ioState = 0;
-		var loadPower = false;
+		var mainPowerPrev = false;
 		// Peak values
 		var	peakMinCellVtg = 9999;
 		var peakMinVtgCellNo = '';
@@ -521,7 +435,26 @@
 
 
 		// FUNCTIONS		
-		
+
+		function bmsDataQuery() {
+			var xmlhttp = new XMLHttpRequest();
+			var url = "/bms.cgi";
+			xmlhttp.onreadystatechange = function() {
+				if(xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+					tree = JSON.parse(xmlhttp.responseText);
+					updGui(tree);
+				}
+			};
+			xmlhttp.open("POST", url);
+			xmlhttp.send();
+		}
+
+		function bmsInit() {
+			bmsDataQuery();
+			setInterval(function(){ bmsDataQuery() }, 1009);
+		}
+
+
 		function placeNeedle(needleCanvasId,relPos) { // Place the needle in a meter
 			var MeterRange = 5.9;
 			var needleCanvas = document.getElementById(needleCanvasId);
@@ -538,7 +471,7 @@
 		}
 		
 
-		function resetGui(){ // Program init, or Lithiumate power off
+		function resetGui(){ // Program init, or BMS power off
 			stateOfCharge = -1;
 			placeNeedle('needleCanvasSoc',stateOfCharge); // SOC
 			packCurrent = -10000;
@@ -554,8 +487,6 @@
 			// Connection status
 			var connectionStatusTxt = '';
 			if(connectionData === '') {connectionStatusTxt = NoDataFile;}
-			if(connectionData === '-2') {connectionStatusTxt = BootlegCopy;}
-			if(connectionData === '-1') {connectionStatusTxt = UsbDisconnected;}
 			if(connectionData === '0') {connectionStatusTxt = PowerOff;}
 			document.getElementById('connectionStatus').innerHTML = connectionStatusTxt;
 		}
@@ -579,20 +510,7 @@
 			var paramValue = responseTxt.slice(startPos +3, endPos -1);
 			return paramValue;
 		}
-		
 
-	  function extractData (dataStr, extrArry) { // Extract data from a string
-	  	var startLoc = 2 * (1 + parseInt(extrArry[isLite? 0 : 1], 16));
-	  	var noOfChars = 2 * extrArry[2];
-	  	var convF = extrArry[3];
-	  	var ofst = extrArry[4];
-			try {
-			  return parseInt(dataStr.substr(startLoc,noOfChars),16) * convF + ofst;
-			} catch(e){
-				alert(dataStr + '_' +extrArry);
-				return -10000;
-			}
-	  }
 	  
 
 		function changePlotUnits() { // The user changed the units for the plot
@@ -667,23 +585,15 @@
 			var cellNo, barX;
 			switch (ovrlyType) {
 				case 'Q': // Constants
-				// Extract data from the constants
-					var hdwrRev = extractData(constantsData, HdwrRevX);
-					var hdwrRevChar = String.fromCharCode("A".charCodeAt(0) + hdwrRev);
-					var sfwrRev = extractData(constantsData, SfwrRevX);
-					var serialNo = extractData(constantsData, SerialNoX);
-					// Extract data from the variables
-					var powerCycleNo2 = extractData(variableData, PowerCycleNo2X);
-					var pwrUpTimer3 = extractData(variableData, PwrUpTimer3X);
-					ovrlyHTML += 'ABOUT<br>&nbsp;<br>Elithion ' + (isLite? LithiumateLite : LithiumatePro) +
-					'<br>BMS Master hdwr rev: ' + hdwrRevChar + ' Serial number: ' + serialNo + ' Software rev: ' + (sfwrRev / 100) +
+					ovrlyHTML += 'ABOUT<br>&nbsp;<br>Elithion ' + VinciBmsStr +
+					'<br>BMS Master hdwr rev: ' + hdwrRevLevelChar + ' Serial number: ' + hdwrSN + ' Software rev: ' + sfwrRevLevel.toFixed(2) +
 					'<br>GUI rev: ' + GUI_Rev + ' - <a href="dl.html">Upgrade</a>' +
-					'<br>Change WiFi SSID (name) <a href="dl.html">Upload wifiname.txt</a> containing new name' +
-					'<br>Power cycle: ' + powerCycleNo2 + ' Power-up time: ' + pwrUpTimer3 + ' s - <a href="index.html?raw=1">Show raw data</a>' +
-					'<br>Copyright Elithion 2013';
+					'<br>Power cycle: ' + powerCycleNo2 + ' Power-up time: ' + pwrUpTimer3 + ' s; No of cells: ' + noOfSeriesCells +
+					'<br>Copyright Elithion 2016';
 					break;
-				case 'A': // Alerts
+				case 'A': // Alerts // 
 					// Balance
+					/* <<< CHANGE TO VINCI
 					var noOfLoadsOn = extractData(variableData,NoOfLoadsOnX);
 					var balDisabCause = extractData(variableData,BalDisabCauseX);
 					var loadOnVtg = extractData(variableData,LoadOnVtgX );
@@ -739,8 +649,8 @@
 						var warningFlags = extractData(variableData,WarningFlags);
 						var lvlFaultFlags = extractData(variableData,LvlFaultFlags);
 						for (bitNo = 0; bitNo < 8; bitNo++) {
-							if ((warningFlags & (1<<bitNo)) !== 0) {warningStr += ProWarnStrings[bitNo];}
-							if ((lvlFaultFlags & (1<<bitNo)) !== 0) {faultStr += ProFaultStrings[bitNo];}
+							if ((warningFlags & (1<<bitNo)) !== 0) {warningStr += WarnStrings[bitNo];}
+							if ((lvlFaultFlags & (1<<bitNo)) !== 0) {faultStr += FaultStrings[bitNo];}
 						}
 					}
 					//
@@ -753,8 +663,10 @@
 					'<br>' + cclLimitStr + '; ' + dclLimitStr +
 					'<br>' + warningStr +
 					'<br>' + faultStr;
+					*/
 					break;
 				case 'T': // Cell temperatures Histogram
+						/* <<< CHANGE TO VINCI
 						var cellTemper;
 						for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
 							cellTemper = parseInt(temperatureData.substr(2 * (cellNo + 1),2),16) * CellTempX[0] + CellTempX[1];
@@ -763,8 +675,10 @@
 							barX.style.top = Math.max(0,Math.min(HistogramHeight-3,((maxTemperStng + 10 - cellTemper) / (maxTemperStng - minTemperStng + 20) * HistogramHeight)))  + 'px';
 							barX.title = '#' + cellNo + '\n' + cellTemper.toFixed(0) + 'C';
 						}
+						*/
 	  				break;
 				case 'V': // Cell voltages Histogram
+						/* <<< CHANGE TO VINCI
 						var cellVtg;
 						for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
 							cellVtg = parseInt(voltageData.substr(2 * (cellNo + 1),2),16) * CellVtgsX[0] + CellVtgsX[1];
@@ -773,6 +687,7 @@
 							barX.style.top = Math.max(0,Math.min(HistogramHeight-3,((maxCellVtgStng + 0.2 - cellVtg) / (maxCellVtgStng - minCellVtgStng + 0.4) * HistogramHeight)))  + 'px';
 							barX.title = '#' + cellNo + '\n' + cellVtg.toFixed(2) + 'V';
 						}
+						*/
 					break;
 				case 'M': // Peak values
 					document.getElementById('peakMinVtg').innerHTML = peakMinCellVtg.toFixed(2);
@@ -800,7 +715,7 @@
 		}
 		
 
-		function updGui() { // Update the display
+		function updGui(tree) { // Update the display
 			var cellNo, currentMeterRange, currentMeterBidir;
 
 			// Power on or off
@@ -810,19 +725,47 @@
 			} else {
 				// POWER ON
 
-				// Cells in series
-				var newNoOfSeriesCells = extractData(variableData, NoOfSeriesCellsX);
-
-				// Get data from the settings
-				isLite = settingsData.length < LiteSettingsMaxLength;
-				minCellVtgStng = extractData(settingsData, VCellMinX);
-				lowCellVtgStng = extractData(settingsData, VCellLowX);
-				hiCellVtgStng = extractData(settingsData, VCellHiX);
-				maxCellVtgStng = extractData(settingsData, VCellMaxX);
-				minTemperStng = extractData(settingsData, TemperMinX);
-				lowTemperStng = extractData(settingsData, TemperLowX);
-				hiTemperStng = extractData(settingsData, TemperHiX);
-				maxTemperStng = extractData(settingsData, TemperMaxX);
+				// Get the data
+				var treeIndex = 0;
+				// Revs and S/N
+				var wiFiSfwrRevLevel = parseInt(tree.bms_values[treeIndex++]); //  MSB: WiFi config; LSB: software rev from SFWR_REV_LVL ('Yes' & '0.10')
+				var wiFiConfig = Math.floor(wiFiSfwrRevLevel / 256); // WiFi Configuration
+				sfwrRevLevel = (wiFiSfwrRevLevel % 256) / 100.0; // Software rev level
+				var hdwrRevSerNoMSB = parseInt(tree.bms_values[treeIndex++]); // MSB: Hardware rev from HDWR_REV_LVL (in ); LSB: Hardware S/N from ID Locations, MSB
+				var hdwrRevLevel = Math.floor(hdwrRevSerNoMSB / 256); // Hardware S/N from ID Locations
+				hdwrRevLevelChar = String.fromCharCode(hdwrRevLevel); // Hardware S/N from ID Locations
+				var hdwrSerNoMSB = (hdwrRevSerNoMSB % 256); // Hardware S/N from ID Locations, MSB
+				var hdwrSerNoLSW = parseInt(tree.bms_values[treeIndex++]); // Hardware S/N from ID Locations, LSW
+				hdwrSN = hdwrSerNoMSB * 0x10000 + hdwrSerNoLSW; // Hardware Serial Number
+				// Statistics
+				powerCycleNo2 = parseInt(tree.bms_values[treeIndex++]); // Power cycle no from e_u_cycle_no
+				newNoOfSeriesCells = parseInt(tree.bms_values[treeIndex++]); // No of cells in series
+				// Battery
+				stateOfCharge = parseInt(tree.bms_values[treeIndex++]) / 2.0; // SoC from r_m_bal_batt_soc LSB [0/5 %], converted to [%]
+				var packCurrent = parseInt(tree.bms_values[treeIndex++]) / 10.0; // Current from r_m_batt_curr (normalized), and converted to actual current [100 mA] (signed)
+				var packVoltage = parseInt(tree.bms_values[treeIndex++]) / 10.0; // Battery voltage from r_m_batt_vtg [100 mV]
+				// Temperatures
+				var minMaxTemper = parseInt(tree.bms_values[treeIndex++]); // Minimum (MSB), Maximum (LSB) temperature [0.5 ¡C - 82] from r_a_batt_tmpr_min_max
+				var minTemper = Math.floor(minMaxTemper / 256); // Minimum temperature [0.5 ¡C - 82]
+				var maxTemper = (minMaxTemper % 256); // Minimum temperature [0.5 ¡C - 82]
+				minTemper = minTemper / 2.0 - 41; // Minimum temperature [¡C]
+				maxTemper = maxTemper / 2.0 - 41; // Minimum temperature [¡C]
+				// Cell voltages
+				var minCellVtg = parseInt(tree.bms_values[treeIndex++]) / 10000.0; // Minimum cell voltage from r_c_min_cell_vtg [100 uV]
+				var maxCellVtg = parseInt(tree.bms_values[treeIndex++]) / 10000.0; // Maximum cell voltage from r_c_max_cell_vtg [100 uV]
+				// Flags
+				var statusFlags = parseInt(tree.bms_values[treeIndex++]); // Status flags; MSB: see below; LSB: r_m_therm_essn_fls
+				var chargeOkFl = (statusFlags & 4) != 0;
+				var dischargeOkFl = (statusFlags & 8) != 0;
+				var warningFl = (statusFlags & 64) != 0;
+				var faultFl = (statusFlags & 128) != 0;
+				var mainSplyFl = (statusFlags & 256) != 0;
+				var chgrSplyFl = (statusFlags & 512) != 0;
+				// Power up time
+				var pwrUpTimeMSW = parseInt(tree.bms_values[treeIndex++]); // Power-up time, MSW from r_u_pwr_up_time2 [s]
+				var pwrUpTimeLSW = parseInt(tree.bms_values[treeIndex++]); //  Power-up time, LSW ""
+				pwrUpTimer3 = pwrUpTimeMSW * 0x10000 + pwrUpTimeLSW; // Power-up time
+				
 				
 				if (newNoOfSeriesCells !== noOfSeriesCells) { // If the number of cells has changed
 					noOfSeriesCells = newNoOfSeriesCells;
@@ -836,30 +779,29 @@
 					histogOvrly.innerHTML = histogHTML;
 					// Pack voltage meter range
 					var maxPackVoltage = noOfSeriesCells * 4.2; // Maximum pack voltage if using that many LiCoO2 cells
-					vtgMtrRange = 50 * (Math.ceil(maxPackVoltage / 50) + 1); 
-					setMeterLabels('vtgMtrLbl',0,vtgMtrRange); // Set the labels in the current meter
+					//vtgMtrRange = 50 * (Math.ceil(maxPackVoltage / 50) + 1); 
 					// Force setting the range of the current meter
 					currMtrRangeMin = 0;
 					currMtrRangeMax = 0;
 				}
 
 				// Get status flags
-				ioState = extractData(variableData, IoStateX);
-				var chargeOk    = (ioState & (1<<ChargeOkBit   )) !== 0;
-				var dischargeOk = (ioState & (1<<DischargeOkBit)) !== 0;
-				var loadPwrNow  = (ioState & (1<<LoadPowerBit  )) !== 0;
-				var sourcePower = (ioState & (1<<SourcePowerBit)) !== 0;
-				var warning     = (ioState & (1<<WarningBit    )) !== 0;
-				var fault       = (ioState & (1<<FaultBit      )) !== 0;
+				//ioState = extractData(variableData, IoStateX);
+				//var chargeOk    = (ioState & (1<<ChargeOkBit   )) !== 0;
+				//var dischargeOk = (ioState & (1<<DischargeOkBit)) !== 0;
+				//var mainSplyFl  = (ioState & (1<<LoadPowerBit  )) !== 0;
+				//var sourcePower = (ioState & (1<<SourcePowerBit)) !== 0;
+				//var warning     = (ioState & (1<<WarningBit    )) !== 0;
+				//var fault       = (ioState & (1<<FaultBit      )) !== 0;
 												
 				// Pack current meter range
-				if ((currMtrRangeMin === 0 && currMtrRangeMax === 0) || (loadPwrNow !== loadPower)) { // If the first time, or if the power source just changed, or the user changed the range of the current meter, update the current meter
-					if (loadPwrNow) { // Load
+				if ((currMtrRangeMin === 0 && currMtrRangeMax === 0) || (mainSplyFl !== mainPowerPrev)) { // If the first time, or if the power source just changed, or the user changed the range of the current meter, update the current meter
+					if (mainSplyFl) { // Main supply
 						currentMeterRange = getRadioBtnVal('loadCurrMeterRange'); // Get the range
 						currentMeterBidir = document.getElementById('loadCurrentMeterBidir').checked; // Get whether the meter should be bidirectional
 						currMtrRangeMin = currentMeterBidir? - currentMeterRange : 0;
 						currMtrRangeMax = currentMeterRange;
-					} else { // Source
+					} else { // Charger supply
 						currentMeterRange = getRadioBtnVal('sourceCurrMeterRange'); // Get the range
 						currentMeterBidir = document.getElementById('sourceCurrentMeterBidir').checked; // Get whether the meter should be bidirectional
 						currMtrRangeMin = - currentMeterRange;
@@ -875,21 +817,24 @@
 						document.getElementById('middleMeterUnits').innerHTML = 'kW';
 					}
 				}
-				loadPower = loadPwrNow; // Save the load power state for the next time
+				mainPowerPrev = mainSplyFl; // Save the load power state for the next time
+				// Voltmeter range
+				if (vtgMtrRange === 0) { // If the first time, or if the user changed the range of the voltmeter, update the voltmeter
+						vtgMtrRange = getRadioBtnVal('vtgMeterRange'); // Get the range
+						setMeterLabels('vtgMtrLbl',0,vtgMtrRange); // Set the labels in the current meter
+				}
 
 				// SOC
-				stateOfCharge = extractData(variableData, StateOfChargeX);
+                stateOfCharge = 50;
 				placeNeedle('needleCanvasSoc',stateOfCharge / 100);
 				document.getElementById("socMeterOvrly").innerHTML = stateOfCharge + ' %';
 				if (stateOfCharge < peakStateOfCharge) {peakStateOfCharge = stateOfCharge;} // Peak
 				// Pack voltage
-				packVoltage = extractData(variableData, PackVoltage2X);
 				placeNeedle('needleCanvasVolt',packVoltage / vtgMtrRange);
 				document.getElementById("vtgMeterOvrly").innerHTML = packVoltage.toFixed(1) + ' V';
 				if (packVoltage < peakMinPackVoltage) {peakMinPackVoltage = packVoltage;} // Peak
 				if (packVoltage > peakMaxPackVoltage) {peakMaxPackVoltage = packVoltage;} // Peak
 				// Pack current / power
-				packCurrent = extractData(variableData, PackCurrentX);
 				if (packCurrent > 3276.8) {packCurrent = packCurrent - 6553.6;} // Handle negative current
 				if (packCurrent > 0) { // Discharging
 					if (packCurrent > peakDchPackCurrent) {peakDchPackCurrent = packCurrent;} // Peak
@@ -897,7 +842,7 @@
 					if (-packCurrent > -peakChgPackCurrent) {peakChgPackCurrent = packCurrent;} // Peak
 				}
 				// Power
-				packPower = packCurrent * packVoltage / 1000;
+				packPower = packCurrent * packVoltage / 1000; // kW
 				if (packCurrent > 0) { // Discharging
 					if (packPower > peakDchPackPower) {peakDchPackPower = packPower;} // Peak
 				} else { // Charging
@@ -913,21 +858,17 @@
 				}
 				
 				// Status boxes
-				document.getElementById('chargeOkStatus').src = chargeOk? 'chargeok.png' : 'nostatus.png';
-				document.getElementById('dischargeOkStatus').src = dischargeOk? 'dischargeok.png' : 'nostatus.png';
-				document.getElementById('powerStatus').src = loadPower? 'ignition.png' : sourcePower? 'acpower.png' : 'nostatus.png';
-				document.getElementById('alertStatus').src = fault? 'fault.png' : warning? 'warning.png' : 'ok.png';
+				document.getElementById('chargeOkStatus').src = chargeOkFl? 'chargeok.png' : 'nostatus.png';
+				document.getElementById('dischargeOkStatus').src = dischargeOkFl? 'dischargeok.png' : 'nostatus.png';
+				document.getElementById('powerStatus').src = mainSplyFl? 'ignition.png' : chgrSplyFl? 'acpower.png' : 'nostatus.png';
+				document.getElementById('alertStatus').src = faultFl? 'fault.png' : warningFl? 'warning.png' : 'ok.png';
 				// Cell temperatures
-				minCellTmp = extractData(variableData,MinCellTmpX);
-				maxCellTmp = extractData(variableData,MaxCellTmpX);
-				document.getElementById('cellTemper').innerHTML = minCellTmp + '~' + maxCellTmp;
+				document.getElementById('cellTemper').innerHTML = minTemper + '~' + maxTemper;
 				// Cell voltages
-				minCellVtg = extractData(variableData,MinCellVtgX);
-				maxCellVtg = extractData(variableData,MaxCellVtgX);
 				document.getElementById('cellVoltages').innerHTML = minCellVtg.toFixed(2) + '~' + maxCellVtg.toFixed(2);
 
 				// Logo
-				document.getElementById('connectionStatus').innerHTML = isLite? LithiumateLite : LithiumatePro;
+				document.getElementById('connectionStatus').innerHTML = VinciBmsStr;
 
 				// Blip
 				document.getElementById('blip').style.visibility = 'visible';
@@ -938,27 +879,6 @@
 			}
 		}
 
-
-		function receiveBMS_Data() { // Receive the data from the BMS
-			if(ajaxRequest.readyState === 4){ // If a response is ready
-				var responseTxt = ajaxRequest.responseText; // Get the contents of the file
-				if (responseTxt === '') { // If the file is empty {Rev 1.01 added}
-					reqBMS_Data();
-					return
-				}
-				connectionData = getParamValue(responseTxt, 'p');
-				constantsData = getParamValue(responseTxt, 'q');
-				settingsData = getParamValue(responseTxt, 's');
-				variableData = getParamValue(responseTxt, 'x');
-				voltageData = getParamValue(responseTxt, 'v');
-				temperatureData = getParamValue(responseTxt, 't');
-				resistanceData = getParamValue(responseTxt, 'r');
-				clockData = getParamValue(responseTxt, 'c');
-				updGui(); // Update the display
-				// Test
-				if (showData) {document.getElementById('testDiv').innerHTML = 'p:' + connectionData +'\n<br>q:' + constantsData +'\n<br>s:' + settingsData +'\n<br>x:' + variableData +'\n<br>v:' + voltageData +'\n<br>t:' + temperatureData +'\n<br>r:' + resistanceData +'\n<br>c:' + clockData;}
-			}
-		}
 
 
 		function presetRadioButton(radioName, defaultVal) { // Preset a set of radio buttons based on the value in their cookie (if any)
@@ -1009,37 +929,22 @@
 
 
 		function holdPeaks() { // Calculate energy and hold the peaks in the data
-		
-				// Energy
-				peakEnergy += packPower / 3600 / 1000; // [kWh]
-				
-				// Peak of the min and max cell voltages
-				var minCellVtg = extractData(variableData,MinCellVtgX);
-				if (minCellVtg < peakMinCellVtg) {peakMinCellVtg = minCellVtg; peakMinVtgCellNo = extractData(variableData,MinVtgCellNoX);}
-				var maxCellVtg = extractData(variableData,MaxCellVtgX);
-				if (maxCellVtg > peakMaxCellVtg) {peakMaxCellVtg = maxCellVtg; peakMaxVtgCellNo = extractData(variableData,MaxVtgCellNoX);}
-				// Peak of the min and max temperatures
-				var minCellTmp = extractData(variableData,MinCellTmpX);
-				if (minCellTmp < peakMinCellTmp) {peakMinCellTmp = minCellTmp; peakMinTmpCellNo = extractData(variableData,MinTmpCellNoX);}
-				var maxCellTmp = extractData(variableData,MaxCellTmpX);
-				if (maxCellTmp > peakMaxCellTmp) {peakMaxCellTmp = maxCellTmp; peakMaxTmpCellNo = extractData(variableData,MaxTmpCellNoX);}
+			/* <<< CHANGE TO VINCI
+			// Energy
+			peakEnergy += packPower / 3600 / 1000; // [kWh]
+			
+			// Peak of the min and max cell voltages
+			var minCellVtg = extractData(variableData,MinCellVtgX);
+			if (minCellVtg < peakMinCellVtg) {peakMinCellVtg = minCellVtg; peakMinVtgCellNo = extractData(variableData,MinVtgCellNoX);}
+			var maxCellVtg = extractData(variableData,MaxCellVtgX);
+			if (maxCellVtg > peakMaxCellVtg) {peakMaxCellVtg = maxCellVtg; peakMaxVtgCellNo = extractData(variableData,MaxVtgCellNoX);}
+			// Peak of the min and max temperatures
+			var minCellTmp = extractData(variableData,MinCellTmpX);
+			if (minCellTmp < peakMinCellTmp) {peakMinCellTmp = minCellTmp; peakMinTmpCellNo = extractData(variableData,MinTmpCellNoX);}
+			var maxCellTmp = extractData(variableData,MaxCellTmpX);
+			if (maxCellTmp > peakMaxCellTmp) {peakMaxCellTmp = maxCellTmp; peakMaxTmpCellNo = extractData(variableData,MaxTmpCellNoX);}
+			*/
 		}
-
-
-
-
-
-		function reqBMS_Data() { // Request data from the BMS, called regularly
-			// Get data from the BMS, through the lithiumatedata.html file
-			var lithiumateDataPath = LithiumateDataPath;
-			if ((navigator.appName === 'Microsoft Internet Explorer') || (navigator.appName === 'Opera')) { // Internet Explorer and Opera cache the data file. This forces the browser to grab the data anew, but making it think it's a new page
-				var jDate = new Date();
-				lithiumateDataPath = LithiumateDataPath + IE_HackPath + jDate.getTime();
-			}
-			// document.getElementById('testDiv').innerHTML = lithiumateDataPath + ' ' + fuckingIE;
-			ajaxRequest.open("GET", lithiumateDataPath, true);
-			ajaxRequest.send(null);
-		} 
 
 
 		function showCellDetails(sender) { // The user clicked one of the bars in a histogram
@@ -1154,8 +1059,15 @@
 			currMtrRangeMax = 0;
 		}
 
+		function vtgMeterChanged(elementName,elementValue) { // The user made a change in the voltage meter settings: save them in cookies
+			setCookie(elementName,elementValue);
+			// Force setting the range of the voltage meter
+			vtgMtrRange = 0;
+		}
+
 
 		function captureData() { // Capture data
+			/* <<< CHANGE TO VINCI
 			var cellNo;
 			// Time
 			capturedData += captureCntr + '\t'; // Point number
@@ -1226,6 +1138,7 @@
 			// Clock
 			document.getElementById('captureClock').innerHTML = captureCntr;
 			captureCntr += 1;
+			*/
 		}
 
 
@@ -1273,7 +1186,7 @@
 			needle.src = 'needle.gif';
 			resetGui(); // Reset all the GUI controls
 			setInterval(function(){oneSecTick();},OneSecRate); // Timer that ticks once / s
-			setInterval(function(){reqBMS_Data();},RefreshRate); // Timer to request data from the BMS
+            bmsInit(); // jjc bms CGI init, refresh rate, etc
 
 			// Get the settings from the cookies
 			presetCheckBox('sourceCurrentMeterBidir','false'); // Source current meter bidirectional, default of 'not'
@@ -1281,6 +1194,7 @@
 			presetRadioButton('sourceCurrMeterRange',50); // Source current meter range, default of 50 A
 			presetRadioButton('loadCurrMeterRange',500); // Load current meter range, default of 500 A
 			presetRadioButton('middleMeterFunction','current'); // Middle meter function, default of current
+			presetRadioButton('vtgMeterRange',200); // Voltmeter range, default of 200 V
 			
 			// Plot
 			// Main plot area
@@ -1300,9 +1214,6 @@
 			}
 			changePlotUnits(); // Preset the values of the units
 
-			// AJAX
-			ajaxRequest = getAjaxFunction();  // Get an Ajax object
-			ajaxRequest.onreadystatechange = function(){receiveBMS_Data();}; // Create a function that will receive data sent from the server
 		}
 	
 
@@ -1410,8 +1321,9 @@
 			<b>GUI settings:</b>
 			<br>
 			<form id="settingsForm">
-				Source current meter range [A]:
+				Current meter range [A]:
 				<br>
+				Source: 
 				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',25)" value="25">25</label>
 				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',50)" value="50" checked>50</label>
 				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',100)" value="100">100</label>
@@ -1420,8 +1332,7 @@
 				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',1000)" value="1000">1000</label>
 				<label><input type="checkBox" name="sourceCurrentMeterBidir" id="sourceCurrentMeterBidir" onClick="currentMeterChanged('sourceCurrentMeterBidir',this.checked)">bidirectional</label>
 				<br>
-				Load current meter range [A]:
-				<br>
+				Load:
 				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',25)" value="25">25</label>
 				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',50)" value="50">50</label>
 				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',100)" value="100">100</label>
@@ -1431,9 +1342,18 @@
 				<label><input type="checkBox" name="loadCurrentMeterBidir" id="loadCurrentMeterBidir" onClick="currentMeterChanged('loadCurrentMeterBidir',this.checked)">bidirectional</label>
 				<br>
 				Middle meter:
-				<br>
 				<label><input type="radio" name="middleMeterFunction" onClick="currentMeterChanged('middleMeterFunction','current')" value="current" checked id="middleMeterCurrent">Current</label>
 				<label><input type="radio" name="middleMeterFunction" onClick="currentMeterChanged('middleMeterFunction','power')" value="power">Power</label>
+				<br>
+				Voltmeter range [V]:
+				<br>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',25)" value="25">25</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',50)" value="50">50</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',100)" value="100">100</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',250)" value="250" checked>250</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',500)" value="500">500</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',1000)" value="1000">1000</label>
+				<br>
 			</form>
 		</div>
 		<div class="overLay wideOverlay" id="captureOvrly">

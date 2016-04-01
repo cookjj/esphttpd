@@ -5,11 +5,11 @@
 #include "httpd.h"
 #include "io.h"
 
-/* this attribute is essential for the serial ISR */
+/* this attribute is essential for global storage arrays */
 #define ICACHE_STORE_ATTR __attribute__((aligned(4)))
 
 
-/* How many param data _words_ we can deal with max */
+/* How many param data _words_ we can deal with max: keeps Rx buffer under 256 bytes */
 #define BMS_DATA_PARM_VALS_MAX 60
 
 /* 2 bytes per word and 2 chars per byte in serial ascii received data */
@@ -130,7 +130,7 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
     }
 
 
-
+    // TODO : get wifi config mode
 
 
 
