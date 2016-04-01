@@ -719,7 +719,7 @@
 			var cellNo, currentMeterRange, currentMeterBidir;
 
 			// Power on or off
-			if (connectionData !== '1') {
+			if (false) { // connectionData !== '1') {
 				resetGui(); // Power off
 
 			} else {
@@ -825,7 +825,6 @@
 				}
 
 				// SOC
-                stateOfCharge = 50;
 				placeNeedle('needleCanvasSoc',stateOfCharge / 100);
 				document.getElementById("socMeterOvrly").innerHTML = stateOfCharge + ' %';
 				if (stateOfCharge < peakStateOfCharge) {peakStateOfCharge = stateOfCharge;} // Peak
