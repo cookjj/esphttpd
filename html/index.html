@@ -1,0 +1,1421 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Elithion Vinci BMS</title>
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+
+	<style type="text/css">
+
+		body {
+			margin:0px;
+		}
+
+		div.mainWindow {
+			width:468px;
+			height:202px;
+			background-color:DarkSlateGray;
+		}
+
+		#settingsIcon {
+			position:absolute;
+			z-index:4;
+			top:2px;
+			left:2px;
+			width:25px;
+			height:25px;
+		}
+
+		#plotIcon {
+			position:absolute;
+			z-index:4;
+			top:4px;
+			left:444px;
+			width:20px;
+			height:14px;
+		}
+
+		#recordingIcon {
+			position:absolute;
+			z-index:4;
+			top:140px;
+			left:444px;
+			width:20px;
+			height:14px;
+		}
+
+		#peakIcon {
+			position:absolute;
+			z-index:4;
+			top:140px;
+			left:2px;
+			width:20px;
+			height:14px;
+		}
+
+		div.roundMeter  { /* Round meter */
+			position:absolute;
+			top:5px;
+			width:148px;
+			height:148px;
+		}
+		div.socMeter {left:5px;}
+		div.currentMeter {left:160px;}
+		div.voltageMeter {left:315px;}
+
+		img.rounddial { /* Dial inside a round meter */
+			position:absolute;
+			z-index:2;
+			top:0px;
+			left:0px;
+			width:148px;
+			height:148px;
+		}
+
+		div.roundMeterLabel { /* Any label inside a round meter */
+			z-index:3;
+			font-family:"Arial Black", Gadget, sans-serif;
+			color:#00CCCC;
+			position:absolute;
+		}
+
+		div.roundMeterItemLabel { /* Labels for the item metered a round meter */
+			text-align:center;
+			font-size:1em;
+			left:45px;
+			top:80px;
+			width:60px;
+		}
+		div.roundMeterValLabel { /* Labels for the values by the tickmarks in a round meter */
+			font-size:0.7em;
+			width:40px;
+		}
+		div.roundMeterValLabel0 {left:55px;top:107px;text-align:left;}
+		div.roundMeterValLabel1 {left:38px;top:97px;text-align:left;}
+		div.roundMeterValLabel2 {left:28px;top:75px;text-align:left;}
+		div.roundMeterValLabel3 {left:32px;top:49px;text-align:left;}
+		div.roundMeterValLabel4 {left:44px;top:33px;text-align:left;}
+		div.roundMeterValLabel5 {left:53px;top:25px;text-align:center;}
+		div.roundMeterValLabel6 {left:65px;top:33px;text-align:right;}
+		div.roundMeterValLabel7 {left:77px;top:49px;text-align:right;}
+		div.roundMeterValLabel8 {left:79px;top:75px;text-align:right;}
+		div.roundMeterValLabel9 {left:69px;top:97px;text-align:right;}
+		div.roundMeterValLabel10 {left:52px;top:107px;text-align:right;}
+		div.roundMeterEndLabel {font-size:0.6em;}
+
+		canvas.needleCanvas { /* Area in which we tranform and display the needle inside a round meter */
+			z-index:4;
+			position:absolute;
+			top:24px;
+			left:25px;
+			width:100px;
+			height:100px;
+		}
+
+		div.logo { /* Elithion logo */
+			position:absolute;
+			top:156px;
+			left:5px;
+			width:143px;
+			height:45px;
+			text-align:center;
+		}
+
+		#blip { /* Dot that blinks when the data are refreshed */
+			position:absolute;
+			top:193px;
+			left:460px;
+			width:5px;
+			height:6px;
+			background-color:yellow;
+			border-radius: 3px;
+			visibility:hidden;
+		}
+
+
+		#connectionStatus { /* Label indicating the connection status */
+			position:relative;
+			top:-8px;
+			left:0px;
+			font-family:"Arial Black", Gadget, sans-serif;
+			font-size:0.7em;
+			color:#3FA263;
+		}
+
+		div.numberMeter { /* One of two readouts with teh range of temperatures and cell voltages */
+			font-family:"Arial Black", Gadget, sans-serif;
+			color:#00CCCC;
+			position:absolute;
+			top:165px;
+			width:90px;
+			height:18px;
+			background-color:black;
+			padding:2px;
+			text-align:right;
+			font-size:0.8em;
+			border-width:4px;
+			border-style:ridge;
+			border-color:gray;
+		}
+		div.cellTemper {left:183px;}
+		div.cellVoltages {left:340px;}
+
+		img.statusBox { /* One of 4 "indicator lights" */
+			position:absolute;
+			z-index:4;
+			width:40px;
+			height:40px;
+		}
+
+		img.chargeOkStatus {top:115px;left:135px;}
+		img.dischargeOkStatus {top:115px;left:290px;}
+		img.powerStatus {top:0px;left:135px;}
+		img.alertStatus {top:160px;left:292px;}
+
+		div.overLay { /* Shown on top to display more details */
+			position:absolute;
+			z-index:5;
+			visibility:hidden;
+			border-width:4px;
+			border-style:ridge;
+			border-color:gray;
+			background-color:white;
+		}
+
+		div.wideOverlay {
+			top:5px;
+			left:5px;
+			width:450px;
+			height:150px;
+		}
+
+		div.meterOverLay {
+			top:65px;
+			width:80px;
+			height:20px;
+			text-align:center;
+		}
+		
+		div.peakList {
+			font-size:0.8em;
+		}
+
+		div.socMeterOvrly { left:37px;}
+		div.middleMeterOvrly { left:192px;}
+		div.vtgMeterOvrly { left:347px;}
+
+		div.detailsOverLay {
+			position:fixed;
+			left:5px;
+			width:80px;
+			height:20px;
+			text-align:center;
+		}
+
+		#infoOvrly { /* Shown on top to display text details */
+			font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+			font-size:0.8em;
+		}
+
+		#histogOvrly { /* Shown on top to display a histogram of cell values */
+			font-size:0.3em;
+			overflow:hidden;
+		}
+
+
+		div.histogBar { /* Individual bar in a histogram */
+			position:absolute;
+			top:105px;
+			height:10px;
+			background-color:lime;
+			border:1px solid black;
+		}
+
+		img.closeBox { 
+			position:absolute;
+			top:2px;
+			right:2px;
+			width:20px;
+			height:20px;
+		}
+		
+		img.captureBtn { 
+			width:30px;
+			height:30px;
+		}
+		
+		#captureClock {
+			position:absolute;
+			top:18px;
+			left:105px;
+		}
+		
+		#plotCanvas {
+			position:absolute;
+			top:23px;
+			left:2px;
+			border:1px solid #000000;
+		}
+
+		#plotUnitsCanvas {
+			position:absolute;
+			top:24px;
+			left:429px;
+		}
+		
+		div.plotUnits {
+			position:absolute;
+			left:436px;
+			font-size:0.5em;
+		}
+		
+		
+		
+	</style>
+
+
+
+	<script type="text/javascript"> // Update main screen
+		
+		// <<< TEST
+
+		// Status flags
+		// bit 0: Main power (ignition): r_a_status_flags, a_main_sply_fl
+		// bit 1: Charger power: r_a_status_flags, a_chgr_sply_fl
+		// bit 2~7: reserved
+			
+		
+		// CONSTANTS
+		var GUI_Rev = '0.1, Mar 31 2016';
+
+		// URLs and paths
+		var LithiumateDataPath = 'lithiumatedata.html'; // <<< Eliminate 
+		var IE_HackPath = '?IE_hack='; // Hack to make it work in IE: by changing the URL each time, we keep IE from caching it
+		
+		// Ranges
+		var TopTemper = 70; 
+		var BotTemper = -30; 
+		var TopCellVtg = 4.5; 
+		var BotCellVtg = 2.0;
+
+		// Cause codes
+		var NoBalanceCauses = ['Hot cell board','All within delta bal vtg','All below min bal vtg','Cool down period','Not AC powered'];
+		var WarnStrings = ['Under voltage','Over voltage','Over charge current','Over discharge current','Cold temperature','Hot temperature','SOH is low','Isolation fault'];
+		var FaultStrings = ['Plug &amp; drive','Interlock','Communication fault','Charge overcurrent','Discharge overcurrent','Over-temperature','Under voltage','Over voltage'];
+
+		// Histogram
+		var HistogramWidth = 450; // Easier than trying to extract the width from the style
+		var HistogramHeight = 150; // Easier than trying to extract the width from the style
+		// Colors
+		var BarColorOk = 'lime';
+		var BarColorSoSo = 'orange';
+		var BarColorBad = 'red';
+
+		// Bits
+		// ioState
+		var FaultBit       = 5;
+		var WarningBit     = 4;
+		var DischargeOkBit = 3;
+		var ChargeOkBit    = 2;
+		var LoadPowerBit   = 1;
+		var SourcePowerBit = 0;
+
+		// Data capture
+		var DataCaptureHeader = 'Point no.\tReal time\tPwrUp time [s]\tSOC [%]\tCurrent [A]\tVoltage [V]\tMin Vtg [V]\tNin no.\tAvg Vtg [V]\tMax Vtg [V]\tMax no.\tMin Temp. [&deg;]\tMin no.\tAvg Temp. [&deg;]\tMax Temp. [&deg;]\tMax no.\tMin Res. [m&Omega;]\tMin no.\tAvg Res. [m&Omega;]\tMax Res. [m&Omega;]\tMax no.\tPack res. [m&Omega;]\tI/O state\tNo of loads\tNo bal cause\tLoad on vtg [V]\tMiss. banks\tNo of a miss. bank\tMiss. cells\tNo of a miss. cell\tRel. CCL\tCCL cause\tRel. DCL\tDCL cause\tWarnings\tFaults\t';
+
+		// Plot
+		var PlotMarkerTime = 60; // How often there is a vertical marker in the plot [s]
+		var PlotCanvasWidth = 425;
+		var PlotUnitsCanvasWidth = 5;
+		var PlotCanvasHeight = 121;
+		// Colors
+		var PlotBgColor = [255,255,255]; // Background - white
+		var PlotMarkerColor = [211,211,211]; // Vertical time marker - light gray
+		var CurrentColor = [255,0,0]; // Current - red
+		var PackVtgColor = [0,128,0]; // Pack Voltage - green
+		var CellVtgsColor = [0,255,0]; // Cell voltages - lime
+		var TemperColor = [255,165,0]; // Temperatures - orange
+		var SOC_Color = [238,130,238]; // SOC - violet
+
+		// Strings
+		var VinciBmsStr = 'Vinci BMS';
+		var PowerOff = 'BMS power off';
+		var NoDataFile = 'No data file';
+
+		// Times and rates
+		var OneSecRate = 1000; // ms
+		var RefreshRate = 333; // ms {Rev 1.01 was 300; 330 prevents getting stuck in a pattern when the python script and this file are in synch and continuously miss data}
+		var BlinkDuration = 50; // ms
+
+
+		// VARIABLES
+		var showData = location.search.length > 0; // If there is a URI, any value, show the data
+		var needle;
+		var vtgMtrRange = 0; // Voltage meter range; cleared to indicate that we we need to set-up the meter labels
+		var currMtrRangeMin = 0; // Current meter range, min; cleared to indicate that we we need to set-up the meter labels
+		var currMtrRangeMax = 0; // Current meter range, max
+		var powerMtrRangeMin = 0; // Power meter range, min
+		var powerMtrRangeMax = 0; // Power meter range, max
+		var ovrlyType = '';	// Code for the type of overlay currently shown
+		// Readings from the BMS
+		var connectionData = '';
+		var constantsData = '';
+		var settingsData = '';
+		var variableData = '';
+		var voltageData = '';
+		var temperatureData = '';
+		var resistanceData = '';
+		var clockData = '';
+		// Settings from the BMS
+		var minCellVtgStng = 0;
+		var lowCellVtgStng = 0;
+		var hiCellVtgStng = 0;
+		var maxCellVtgStng = 0;
+		var minTemperStng = 0;
+		var lowTemperStng = 0;
+		var hiTemperStng = 0;
+		var maxTemperStng = 0;
+		var noOfSeriesCells = 0;
+		// Parameter values from the BMS
+		var minCellVtg = 0;
+		var maxCellVtg = 0;
+		var minCellTmp = 0;
+		var maxCellTmp = 0;
+		var sfwrRevLevel = 0;
+		var hdwrRevLevelChar = '';
+		var hdwrSN = 0;
+		var newNoOfSeriesCells = 0;
+		var powerCycleNo2 = 0;
+		var pwrUpTimer3 = 0;
+		var stateOfCharge = -1;
+		var packCurrent = -10000;
+		var packVoltage = -1;
+		var packPower = 0;
+		var ioState = 0;
+		var mainPowerPrev = false;
+		// Peak values
+		var	peakMinCellVtg = 9999;
+		var peakMinVtgCellNo = '';
+		var peakMaxCellVtg = 0;
+		var peakMaxVtgCellNo = '';
+		var peakMinCellTmp = 9999;
+		var peakMinTmpCellNo = '';
+		var peakMaxCellTmp = 0;
+		var peakMaxTmpCellNo = '';
+		var peakMinPackVoltage = 9999;
+		var peakMaxPackVoltage = 0;
+		var peakChgPackCurrent = 0;
+		var peakDchPackCurrent = 0;
+		var peakEnergy = 0;
+		var peakChgPackPower = 0;
+		var peakDchPackPower = 0;
+		var peakStateOfCharge = 100;
+		// Misc
+		var activeBar; // Bar in a histogram that the user clicked, so we may get its title and show it in the info box
+		var ajaxRequest;
+		var unitNo; // Counter
+		// Data capture
+		var capturedData = '';
+		var captureCntr = 0;
+		var captureOn = false;
+		// Plot
+		var plotLastRowData;
+		var plotCanvas;
+		var plotCanvasCtx;
+		var prevPackCurrPt = -1;
+		var prevPackVtgPt = -1;
+		var prevMinCellPt = -1;
+		var prevMaxCellPt = -1;
+		var prevMinTempPt = -1;
+		var prevMaxTempPt = -1;
+		var prevSOC = -1;
+		var plotVertMarkTmr = 0; // Timer to place vertical lines in the plot
+
+
+		// FUNCTIONS		
+
+		function bmsDataQuery() {
+			var xmlhttp = new XMLHttpRequest();
+			var url = "/bms.cgi";
+			xmlhttp.onreadystatechange = function() {
+				if(xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+					tree = JSON.parse(xmlhttp.responseText);
+					updGui(tree);
+				}
+			};
+			xmlhttp.open("POST", url);
+			xmlhttp.send();
+		}
+
+		function bmsInit() {
+			bmsDataQuery();
+			setInterval(function(){ bmsDataQuery() }, 1009);
+		}
+
+
+		function placeNeedle(needleCanvasId,relPos) { // Place the needle in a meter
+			var MeterRange = 5.9;
+			var needleCanvas = document.getElementById(needleCanvasId);
+			var ctx = needleCanvas.getContext('2d'); // Used to fails in IE, not doesn't by adding excanvas.js
+			ctx.save();
+			var imgSize = needleCanvas.width;
+			ctx.clearRect( 0, 0, imgSize, imgSize );
+			ctx.translate( imgSize/2 , imgSize/2 );
+			var angle = MeterRange * (relPos - 0.5);
+			if ((relPos < 0) || (relPos > 1)) {angle = 3.1415;}   // If outside the range, draw it off scale
+			ctx.rotate(angle); // Doesn't work in excanvas.js (for IE)
+			ctx.drawImage( needle, -imgSize/2, -imgSize/2 );
+			ctx.restore();
+		}
+		
+
+		function resetGui(){ // Program init, or BMS power off
+			stateOfCharge = -1;
+			placeNeedle('needleCanvasSoc',stateOfCharge); // SOC
+			packCurrent = -10000;
+			placeNeedle('needleCanvasCurr',packCurrent); // Pack current
+			packVoltage = -1;
+			placeNeedle('needleCanvasVolt',packVoltage); // Pack voltage
+			document.getElementById('powerStatus').src = 'nostatus.png'; // Status boxes
+			document.getElementById('chargeOkStatus').src = 'nostatus.png';
+			document.getElementById('dischargeOkStatus').src = 'nostatus.png';
+			document.getElementById('alertStatus').src = 'nostatus.png';
+			document.getElementById('cellTemper').innerHTML = ''; // Cell temperatures
+			document.getElementById('cellVoltages').innerHTML = ''; // Cell voltages
+			// Connection status
+			var connectionStatusTxt = '';
+			if(connectionData === '') {connectionStatusTxt = NoDataFile;}
+			if(connectionData === '0') {connectionStatusTxt = PowerOff;}
+			document.getElementById('connectionStatus').innerHTML = connectionStatusTxt;
+		}
+		
+
+		function getAjaxFunction(){ // Get an Ajax object
+			try{ return new XMLHttpRequest(); } // Opera 8.0+, Firefox, Safari, IE 8
+			catch (error1){ // Internet Explorer Browsers up to IE 7
+				 try{ return ActiveXObject("Msxml2.XMLHTTP");}
+				 catch (error2) {
+				 	try{ return new ActiveXObject("Microsoft.XMLHTTP"); }
+				 	catch (error3){ return false;}
+				}				
+			}
+		}
+
+
+		function getParamValue(responseTxt, paramLetter) { //  Extract a parameter value from the received data
+			var startPos = responseTxt.indexOf(paramLetter + '=\'');
+			var endPos = responseTxt.indexOf(';',startPos);
+			var paramValue = responseTxt.slice(startPos +3, endPos -1);
+			return paramValue;
+		}
+
+	  
+
+		function changePlotUnits() { // The user changed the units for the plot
+			var minVal,maxval;
+			// Set the min and max values for the selected units
+			if(document.getElementById('plotCurrent').checked) {minVal = currMtrRangeMin; maxval = currMtrRangeMax;}
+			if(document.getElementById('plotPackVtg').checked) {minVal = 0; maxval = vtgMtrRange;}
+			if(document.getElementById('plotCellVtgs').checked) {minVal = BotCellVtg; maxval = TopCellVtg;}
+			if(document.getElementById('plotTemper').checked) {minVal = BotTemper; maxval = TopTemper;}
+			if(document.getElementById('plotSOC').checked) {minVal = 0; maxval = 100;}
+
+			// Change the units values
+			for(unitNo = 0; unitNo <= 10; unitNo++) {
+				document.getElementById("plotUnit" + unitNo).innerHTML = minVal + unitNo * (maxval - minVal) / 10;
+			}		
+		}
+
+
+		function setMeterLabels(labelBase, minVal, maxVal) { // Set the labels in a meter
+			var i;
+		 	var valStep = (maxVal - minVal) / 10;
+			for (i=0; i <= 10; i++) {document.getElementById(labelBase + i).innerHTML = minVal + i * valStep;}
+			changePlotUnits(); // Preset the values of the units in the plot				
+		}
+		
+
+		function getRadioBtnVal(radioName) { // Preset a set of radio buttons based on the value in their cookie (if any)
+			var i;
+			var radioButtons = document.getElementsByName(radioName);
+			for(i = 0; i < radioButtons.length; i++){ // For each radio button in that set
+				if (radioButtons[i].checked) {return radioButtons[i].value;} // If that's the one with that value, check it
+			}
+		}
+		
+
+		function endBlip() { // End the flash of the blip
+			document.getElementById('blip').style.visibility = 'hidden';
+		}
+		
+		
+		function drawPixel (y, colorSet) {
+			var index = y * 4;
+			plotLastRowData.data[index++] = colorSet[0]; // Red
+			plotLastRowData.data[index++] = colorSet[1]; // Green
+			plotLastRowData.data[index++] = colorSet[2]; // Blue
+			plotLastRowData.data[index] = 255; // Alpha
+		}
+		
+		
+		function plotLine (point1, point2, colorSet) { // Draw a vertical line between two points
+			var index = Math.min(point1, point2) * 4;
+			var pixelNo;
+			for(pixelNo = 0; pixelNo <= Math.abs(point1 - point2); pixelNo++) {
+				plotLastRowData.data[index++] = colorSet[0]; // Red
+				plotLastRowData.data[index++] = colorSet[1]; // Green
+				plotLastRowData.data[index++] = colorSet[2]; // Blue
+				plotLastRowData.data[index++] = 255; // Alpha
+			}
+		}
+
+
+		function plotParam (prevPoint, newValue, plotTopVal, plotBotVal, colorSet) { // Plot the value of a parameter, given the range of the plot for that parameter
+			var newPoint = Math.floor((plotTopVal - newValue) / (plotTopVal - plotBotVal) * PlotCanvasHeight); // Convert the value to the corresponding point within the plot
+			newPoint = Math.max(0,Math.min(PlotCanvasHeight-1,newPoint)); // Clamp it within the plot
+			plotLine (prevPoint, newPoint, colorSet); // Plot a line between the old point and the new point
+			return newPoint; // Return the new point, so we can save it as the old point
+		}
+		
+
+		function updOverlay() { // Update the overlay, if any
+			var ovrlyHTML = '<img src="closebox.gif" class="closeBox" alt="close box">';
+			var cellNo, barX;
+			switch (ovrlyType) {
+				case 'Q': // Constants
+					ovrlyHTML += 'ABOUT<br>&nbsp;<br>Elithion ' + VinciBmsStr +
+					'<br>BMS Master hdwr rev: ' + hdwrRevLevelChar + ' Serial number: ' + hdwrSN + ' Software rev: ' + sfwrRevLevel.toFixed(2) +
+					'<br>GUI rev: ' + GUI_Rev + ' - <a href="dl.html">Upgrade</a>' +
+					'<br>Power cycle: ' + powerCycleNo2 + ' Power-up time: ' + pwrUpTimer3 + ' s; No of cells: ' + noOfSeriesCells +
+					'<br>Copyright Elithion 2016';
+					break;
+				case 'A': // Alerts // 
+					// Balance
+					/* <<< CHANGE TO VINCI
+					var noOfLoadsOn = extractData(variableData,NoOfLoadsOnX);
+					var balDisabCause = extractData(variableData,BalDisabCauseX);
+					var loadOnVtg = extractData(variableData,LoadOnVtgX );
+					loadOnVtg = 4.55
+					var balanceStr = 'Balancing ';
+					balanceStr += (loadOnVtg > 4.5)? 'off: ' + NoBalanceCauses[balDisabCause] : 'on if vtg > ' + loadOnVtg.toFixed(2) + ' V; ' + noOfLoadsOn + ' loads on.'; // {Rev 1.02 was loadOnVtg === 4.55{
+					// Banks
+					var missBanksCode = extractData(variableData,MissBanksCodeX);
+					var missBanks = missBanksCode % 16;
+					var noOfAMissBank = Math.floor(missBanksCode / 16);
+					var banksStr = (missBanks === 0)? 'Banks OK' : missBanks + ' missing banks, including bank ' + noOfAMissBank;
+					// Cells
+					var noOfMissCells = extractData(variableData,NoOfMissCellsX);
+					var missCellNo = extractData(variableData,MissCellNoX);
+					var cellsStr = (noOfMissCells === 0)? 'Cells OK' : noOfMissCells + ' missing cells, including cell ' + missCellNo;
+					// Voltage
+					var avgCellVtg = extractData(variableData,AvgCellVtgX);
+					var minVtgCellNo = extractData(variableData,MinVtgCellNoX );
+					var maxVtgCellNo = extractData(variableData,MaxVtgCellNoX );
+					var vtgStr = 'Voltage [V]: ' + minCellVtg.toFixed(2) + ' min (#' + minVtgCellNo + '), ' + avgCellVtg.toFixed(2) + ' avg, ' + maxCellVtg.toFixed(2) + ' max (#' + maxVtgCellNo + '), pack: ' + packVoltage.toFixed(2);
+					// Temperature
+					var avgCellTmp = extractData(variableData,AvgCellTmpX);
+					var minTmpCellNo = extractData(variableData,MinTmpCellNoX );
+					var maxTmpCellNo = extractData(variableData,MaxTmpCellNoX );
+					var tmpStr = 'Temperature [&deg;C]: ' + minCellTmp + ' min (#' + minTmpCellNo + '), ' + avgCellTmp + ' avg, ' + maxCellTmp + ' max (#' + maxTmpCellNo + ')';
+					// Resistance
+					var minCellRes = extractData(variableData,MinCellResX);
+					var avgCellRes = extractData(variableData,AvgCellResX);
+					var maxCellRes = extractData(variableData,MaxCellResX);
+					var minResCellNo = extractData(variableData,MinResCellNoX );
+					var maxResCellNo = extractData(variableData,MaxResCellNoX );
+					var packResistance2 = extractData(variableData,PackResistance2X);
+					var resStr = 'Resistance [m&Omega;]: ' + minCellRes.toFixed(1) + ' min (#' + minResCellNo + '), ' + avgCellRes.toFixed(1) + ' avg, ' + maxCellRes.toFixed(1) + ' max (#' + maxResCellNo + '), pack: ' + packResistance2.toFixed(1);
+					// Limits
+					var relCCL = extractData(variableData,RelCCLX);
+					var cclLimitCause = extractData(variableData,CclLimitCauseX);
+					var cclLimitStr = 'Charge Limit: ' + (100 * relCCL / 255).toFixed(0) + '%: ' + LiteLimitCauseStrings[cclLimitCause];
+					var relDCL = extractData(variableData,RelDCLX);
+					var dclLimitCause = extractData(variableData,DclLimitCauseX);
+					var dclLimitStr = 'Discharge Limit: ' + (100 * relDCL / 255).toFixed(0) + '%: ' + LiteLimitCauseStrings[dclLimitCause];
+					// Warnings and faults
+					var warningStr = 'Warnings:';
+					var faultStr = 'Faults:';
+					var bitNo;
+					if (isLite) { // Lite
+						var warningFlags2 = extractData(variableData,WarningFlags2X);
+						var faultFlags2 = extractData(variableData,FaultFlags2X);						
+						for (bitNo = 0; bitNo < 16; bitNo++) {
+							if ((warningFlags2 & (1<<bitNo)) !== 0) {warningStr += LiteWarnFaultStrings[bitNo];}
+							if ((faultFlags2 & (1<<bitNo)) !== 0) {faultStr += LiteWarnFaultStrings[bitNo];}
+						}
+					} else { // Pro
+						var warningFlags = extractData(variableData,WarningFlags);
+						var lvlFaultFlags = extractData(variableData,LvlFaultFlags);
+						for (bitNo = 0; bitNo < 8; bitNo++) {
+							if ((warningFlags & (1<<bitNo)) !== 0) {warningStr += WarnStrings[bitNo];}
+							if ((lvlFaultFlags & (1<<bitNo)) !== 0) {faultStr += FaultStrings[bitNo];}
+						}
+					}
+					//
+					ovrlyHTML += 'STATUS' +
+					'<br>' + banksStr + '; ' + cellsStr +
+					'<br>' + balanceStr +
+					'<br>' + vtgStr +
+					'<br>' + tmpStr +
+					'<br>' + resStr +
+					'<br>' + cclLimitStr + '; ' + dclLimitStr +
+					'<br>' + warningStr +
+					'<br>' + faultStr;
+					*/
+					break;
+				case 'T': // Cell temperatures Histogram
+						/* <<< CHANGE TO VINCI
+						var cellTemper;
+						for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+							cellTemper = parseInt(temperatureData.substr(2 * (cellNo + 1),2),16) * CellTempX[0] + CellTempX[1];
+							barX = document.getElementById('bar' + cellNo);
+							barX.style.backgroundColor = ((cellTemper < minTemperStng) || (cellTemper > maxTemperStng))? BarColorBad : ((cellTemper < lowTemperStng) || (cellTemper > hiTemperStng))? BarColorSoSo : BarColorOk;
+							barX.style.top = Math.max(0,Math.min(HistogramHeight-3,((maxTemperStng + 10 - cellTemper) / (maxTemperStng - minTemperStng + 20) * HistogramHeight)))  + 'px';
+							barX.title = '#' + cellNo + '\n' + cellTemper.toFixed(0) + 'C';
+						}
+						*/
+	  				break;
+				case 'V': // Cell voltages Histogram
+						/* <<< CHANGE TO VINCI
+						var cellVtg;
+						for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+							cellVtg = parseInt(voltageData.substr(2 * (cellNo + 1),2),16) * CellVtgsX[0] + CellVtgsX[1];
+							barX = document.getElementById('bar' + cellNo);
+							barX.style.backgroundColor = ((cellVtg < minCellVtgStng) || (cellVtg > maxCellVtgStng))? BarColorBad : ((cellVtg < lowCellVtgStng) || (cellVtg > hiCellVtgStng))? BarColorSoSo : BarColorOk;
+							barX.style.top = Math.max(0,Math.min(HistogramHeight-3,((maxCellVtgStng + 0.2 - cellVtg) / (maxCellVtgStng - minCellVtgStng + 0.4) * HistogramHeight)))  + 'px';
+							barX.title = '#' + cellNo + '\n' + cellVtg.toFixed(2) + 'V';
+						}
+						*/
+					break;
+				case 'M': // Peak values
+					document.getElementById('peakMinVtg').innerHTML = peakMinCellVtg.toFixed(2);
+					document.getElementById('peakMinVtgNo').innerHTML = peakMinVtgCellNo;
+					document.getElementById('peakMaxVtg').innerHTML = peakMaxCellVtg.toFixed(2);
+					document.getElementById('peakMaxVtgno').innerHTML = peakMaxVtgCellNo;
+					document.getElementById('peakMinTemp').innerHTML = peakMinCellTmp;
+					document.getElementById('peakMinTempNo').innerHTML = peakMinTmpCellNo;
+					document.getElementById('peakMaxTemp').innerHTML = peakMaxCellTmp;
+					document.getElementById('peakMaxTempno').innerHTML = peakMaxTmpCellNo;
+					document.getElementById('peakMinPackVtg').innerHTML = peakMinPackVoltage.toFixed(2);
+					document.getElementById('peakMaxPackVtg').innerHTML = peakMaxPackVoltage.toFixed(2);
+					document.getElementById('peakMaxChgCurrVtg').innerHTML = peakChgPackCurrent.toFixed(1);
+					document.getElementById('peakMaxDchCurrVtg').innerHTML = peakDchPackCurrent.toFixed(1);
+					document.getElementById('peakChgPackPower').innerHTML = peakChgPackPower.toFixed(1);
+					document.getElementById('peakDchPackPower').innerHTML = peakDchPackPower.toFixed(1);
+					document.getElementById('peakEnergy').innerHTML = peakEnergy.toFixed(1);
+					document.getElementById('peakMinSOC').innerHTML = peakStateOfCharge.toFixed(1);
+					break;
+				case 'P': // Plot
+					break;
+			}
+				document.getElementById('infoOvrly').innerHTML = ovrlyHTML;
+				if (activeBar) {document.getElementById('histogDetailsOvrly').innerHTML = activeBar.title;} // Update the text in the histogram 
+		}
+		
+
+		function updGui(tree) { // Update the display
+			var cellNo, currentMeterRange, currentMeterBidir;
+
+			// Power on or off
+			if (false) { // connectionData !== '1') {
+				resetGui(); // Power off
+
+			} else {
+				// POWER ON
+
+				// Get the data
+				var treeIndex = 0;
+				// Revs and S/N
+				var wiFiSfwrRevLevel = parseInt(tree.bms_values[treeIndex++]); //  MSB: WiFi config; LSB: software rev from SFWR_REV_LVL ('Yes' & '0.10')
+				var wiFiConfig = Math.floor(wiFiSfwrRevLevel / 256); // WiFi Configuration
+				sfwrRevLevel = (wiFiSfwrRevLevel % 256) / 100.0; // Software rev level
+				var hdwrRevSerNoMSB = parseInt(tree.bms_values[treeIndex++]); // MSB: Hardware rev from HDWR_REV_LVL (in ); LSB: Hardware S/N from ID Locations, MSB
+				var hdwrRevLevel = Math.floor(hdwrRevSerNoMSB / 256); // Hardware S/N from ID Locations
+				hdwrRevLevelChar = String.fromCharCode(hdwrRevLevel); // Hardware S/N from ID Locations
+				var hdwrSerNoMSB = (hdwrRevSerNoMSB % 256); // Hardware S/N from ID Locations, MSB
+				var hdwrSerNoLSW = parseInt(tree.bms_values[treeIndex++]); // Hardware S/N from ID Locations, LSW
+				hdwrSN = hdwrSerNoMSB * 0x10000 + hdwrSerNoLSW; // Hardware Serial Number
+				// Statistics
+				powerCycleNo2 = parseInt(tree.bms_values[treeIndex++]); // Power cycle no from e_u_cycle_no
+				newNoOfSeriesCells = parseInt(tree.bms_values[treeIndex++]); // No of cells in series
+				// Battery
+				stateOfCharge = parseInt(tree.bms_values[treeIndex++]) / 2.0; // SoC from r_m_bal_batt_soc LSB [0/5 %], converted to [%]
+				var packCurrent = parseInt(tree.bms_values[treeIndex++]) / 10.0; // Current from r_m_batt_curr (normalized), and converted to actual current [100 mA] (signed)
+				var packVoltage = parseInt(tree.bms_values[treeIndex++]) / 10.0; // Battery voltage from r_m_batt_vtg [100 mV]
+				// Temperatures
+				var minMaxTemper = parseInt(tree.bms_values[treeIndex++]); // Minimum (MSB), Maximum (LSB) temperature [0.5 ¡C - 82] from r_a_batt_tmpr_min_max
+				var minTemper = Math.floor(minMaxTemper / 256); // Minimum temperature [0.5 ¡C - 82]
+				var maxTemper = (minMaxTemper % 256); // Minimum temperature [0.5 ¡C - 82]
+				minTemper = minTemper / 2.0 - 41; // Minimum temperature [¡C]
+				maxTemper = maxTemper / 2.0 - 41; // Minimum temperature [¡C]
+				// Cell voltages
+				var minCellVtg = parseInt(tree.bms_values[treeIndex++]) / 10000.0; // Minimum cell voltage from r_c_min_cell_vtg [100 uV]
+				var maxCellVtg = parseInt(tree.bms_values[treeIndex++]) / 10000.0; // Maximum cell voltage from r_c_max_cell_vtg [100 uV]
+				// Flags
+				var statusFlags = parseInt(tree.bms_values[treeIndex++]); // Status flags; MSB: see below; LSB: r_m_therm_essn_fls
+				var chargeOkFl = (statusFlags & 4) != 0;
+				var dischargeOkFl = (statusFlags & 8) != 0;
+				var warningFl = (statusFlags & 64) != 0;
+				var faultFl = (statusFlags & 128) != 0;
+				var mainSplyFl = (statusFlags & 256) != 0;
+				var chgrSplyFl = (statusFlags & 512) != 0;
+				// Power up time
+				var pwrUpTimeMSW = parseInt(tree.bms_values[treeIndex++]); // Power-up time, MSW from r_u_pwr_up_time2 [s]
+				var pwrUpTimeLSW = parseInt(tree.bms_values[treeIndex++]); //  Power-up time, LSW ""
+				pwrUpTimer3 = pwrUpTimeMSW * 0x10000 + pwrUpTimeLSW; // Power-up time
+				
+				
+				if (newNoOfSeriesCells !== noOfSeriesCells) { // If the number of cells has changed
+					noOfSeriesCells = newNoOfSeriesCells;
+					// Create bars in the histogram
+					var histogOvrly = document.getElementById('histogOvrly');
+					var barWidth = HistogramWidth / noOfSeriesCells;
+						var histogHTML = '';
+						for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+							histogHTML += '<div class="histogBar" id="bar' + cellNo + '" style="width:' + barWidth + 'px; height:150px; top:0px; left:' + cellNo * barWidth + 'px;"  onClick="showCellDetails(this)"></div>';
+						}
+					histogOvrly.innerHTML = histogHTML;
+					// Pack voltage meter range
+					var maxPackVoltage = noOfSeriesCells * 4.2; // Maximum pack voltage if using that many LiCoO2 cells
+					//vtgMtrRange = 50 * (Math.ceil(maxPackVoltage / 50) + 1); 
+					// Force setting the range of the current meter
+					currMtrRangeMin = 0;
+					currMtrRangeMax = 0;
+				}
+
+				// Get status flags
+				//ioState = extractData(variableData, IoStateX);
+				//var chargeOk    = (ioState & (1<<ChargeOkBit   )) !== 0;
+				//var dischargeOk = (ioState & (1<<DischargeOkBit)) !== 0;
+				//var mainSplyFl  = (ioState & (1<<LoadPowerBit  )) !== 0;
+				//var sourcePower = (ioState & (1<<SourcePowerBit)) !== 0;
+				//var warning     = (ioState & (1<<WarningBit    )) !== 0;
+				//var fault       = (ioState & (1<<FaultBit      )) !== 0;
+												
+				// Pack current meter range
+				if ((currMtrRangeMin === 0 && currMtrRangeMax === 0) || (mainSplyFl !== mainPowerPrev)) { // If the first time, or if the power source just changed, or the user changed the range of the current meter, update the current meter
+					if (mainSplyFl) { // Main supply
+						currentMeterRange = getRadioBtnVal('loadCurrMeterRange'); // Get the range
+						currentMeterBidir = document.getElementById('loadCurrentMeterBidir').checked; // Get whether the meter should be bidirectional
+						currMtrRangeMin = currentMeterBidir? - currentMeterRange : 0;
+						currMtrRangeMax = currentMeterRange;
+					} else { // Charger supply
+						currentMeterRange = getRadioBtnVal('sourceCurrMeterRange'); // Get the range
+						currentMeterBidir = document.getElementById('sourceCurrentMeterBidir').checked; // Get whether the meter should be bidirectional
+						currMtrRangeMin = - currentMeterRange;
+						currMtrRangeMax = currentMeterBidir? currentMeterRange : 0;
+					}
+					if (document.getElementById('middleMeterCurrent').checked) { // Current
+						setMeterLabels('currMtrLbl',currMtrRangeMin, currMtrRangeMax); // Set the labels in the current meter
+						document.getElementById('middleMeterUnits').innerHTML = 'Amp';
+					} else { // Power
+						powerMtrRangeMin = 10 * Math.floor(currMtrRangeMin * vtgMtrRange / 10000);
+						powerMtrRangeMax = 10 * Math.ceil(currMtrRangeMax * vtgMtrRange / 10000);
+						setMeterLabels('currMtrLbl',powerMtrRangeMin, powerMtrRangeMax); // Set the labels in the current meter
+						document.getElementById('middleMeterUnits').innerHTML = 'kW';
+					}
+				}
+				mainPowerPrev = mainSplyFl; // Save the load power state for the next time
+				// Voltmeter range
+				if (vtgMtrRange === 0) { // If the first time, or if the user changed the range of the voltmeter, update the voltmeter
+						vtgMtrRange = getRadioBtnVal('vtgMeterRange'); // Get the range
+						setMeterLabels('vtgMtrLbl',0,vtgMtrRange); // Set the labels in the current meter
+				}
+
+				// SOC
+				placeNeedle('needleCanvasSoc',stateOfCharge / 100);
+				document.getElementById("socMeterOvrly").innerHTML = stateOfCharge + ' %';
+				if (stateOfCharge < peakStateOfCharge) {peakStateOfCharge = stateOfCharge;} // Peak
+				// Pack voltage
+				placeNeedle('needleCanvasVolt',packVoltage / vtgMtrRange);
+				document.getElementById("vtgMeterOvrly").innerHTML = packVoltage.toFixed(1) + ' V';
+				if (packVoltage < peakMinPackVoltage) {peakMinPackVoltage = packVoltage;} // Peak
+				if (packVoltage > peakMaxPackVoltage) {peakMaxPackVoltage = packVoltage;} // Peak
+				// Pack current / power
+				if (packCurrent > 3276.8) {packCurrent = packCurrent - 6553.6;} // Handle negative current
+				if (packCurrent > 0) { // Discharging
+					if (packCurrent > peakDchPackCurrent) {peakDchPackCurrent = packCurrent;} // Peak
+				} else { // Charging
+					if (-packCurrent > -peakChgPackCurrent) {peakChgPackCurrent = packCurrent;} // Peak
+				}
+				// Power
+				packPower = packCurrent * packVoltage / 1000; // kW
+				if (packCurrent > 0) { // Discharging
+					if (packPower > peakDchPackPower) {peakDchPackPower = packPower;} // Peak
+				} else { // Charging
+					if (-packPower > -peakChgPackPower) {peakChgPackPower = packPower;} // Peak
+				}
+				// Pack current / power meter
+				if (document.getElementById('middleMeterCurrent').checked) { // Current
+					placeNeedle('needleCanvasCurr',(packCurrent - currMtrRangeMin) / (currMtrRangeMax - currMtrRangeMin));
+					document.getElementById("middleMeterOvrly").innerHTML = packCurrent.toFixed(1) +' A';
+				} else { // Power
+					placeNeedle('needleCanvasCurr',(packPower - powerMtrRangeMin) / (powerMtrRangeMax - powerMtrRangeMin));
+					document.getElementById("middleMeterOvrly").innerHTML = packPower.toFixed(2) +' kW';
+				}
+				
+				// Status boxes
+				document.getElementById('chargeOkStatus').src = chargeOkFl? 'chargeok.png' : 'nostatus.png';
+				document.getElementById('dischargeOkStatus').src = dischargeOkFl? 'dischargeok.png' : 'nostatus.png';
+				document.getElementById('powerStatus').src = mainSplyFl? 'ignition.png' : chgrSplyFl? 'acpower.png' : 'nostatus.png';
+				document.getElementById('alertStatus').src = faultFl? 'fault.png' : warningFl? 'warning.png' : 'ok.png';
+				// Cell temperatures
+				document.getElementById('cellTemper').innerHTML = minTemper + '~' + maxTemper;
+				// Cell voltages
+				document.getElementById('cellVoltages').innerHTML = minCellVtg.toFixed(2) + '~' + maxCellVtg.toFixed(2);
+
+				// Logo
+				document.getElementById('connectionStatus').innerHTML = VinciBmsStr;
+
+				// Blip
+				document.getElementById('blip').style.visibility = 'visible';
+				setTimeout(function(){endBlip();}, BlinkDuration);
+
+				// Overlays
+				updOverlay(); 	// Update the contents of the overlays			
+			}
+		}
+
+
+
+		function presetRadioButton(radioName, defaultVal) { // Preset a set of radio buttons based on the value in their cookie (if any)
+			var radioButtons = document.getElementsByName(radioName);
+			var cookieValue = getCookie(radioName, defaultVal); // Get the value of that cookie, using a default if no cookie
+			var i;
+			for(i = 0; i < radioButtons.length; i++){ // For each radio button in that set
+				if (radioButtons[i].value === cookieValue) {radioButtons[i].checked = true;} // If that's the one with that value, check it
+			}
+		}
+
+
+		function presetCheckBox(checkBoxName,defaultVal) { // Preset a checkbox based on the value in its cookie (if any)
+			var cookieValue = getCookie(checkBoxName, defaultVal); // Get the value of that cookie, using a default if no cookie
+			document.getElementById(checkBoxName).checked = (cookieValue === 'true');
+		}
+		
+
+		function plotData() { // Plot the data
+			
+			// Scroll the plot right 1 px, clearing the right-most column
+			// Copy everything except the left-most column, and paste it starting at the left end. 
+			// That leaves the right most column untouched, so we'll have to over-write it with the line canvas data
+			plotCanvasCtx.putImageData(plotCanvasCtx.getImageData(1, 0, PlotCanvasWidth -1, PlotCanvasHeight), 0, 0); 
+			
+			// Clear the line canvas data, with Vertical markers every so often, and 10 horizontal markers 
+			plotVertMarkTmr = (plotVertMarkTmr + 1) % PlotMarkerTime; // Advance the vertical marker timer
+			plotLine(0, PlotCanvasHeight, (plotVertMarkTmr === 0)? PlotMarkerColor : PlotBgColor); // Clear the new columns, or place a vertical marker
+			for(unitNo = 0; unitNo <= 10; unitNo++) {drawPixel(unitNo * 12,PlotMarkerColor);}			
+			
+			// Plot each parameter
+			// Current
+			prevPackCurrPt = plotParam(prevPackCurrPt, packCurrent, currMtrRangeMax, currMtrRangeMin, CurrentColor);
+			// Pack voltage
+			prevPackVtgPt = plotParam(prevPackVtgPt, packVoltage, vtgMtrRange, 0, PackVtgColor);
+			// Cell voltages
+			prevMinCellPt = plotParam(prevMinCellPt, minCellVtg, TopCellVtg, BotCellVtg, CellVtgsColor);
+			prevMaxCellPt = plotParam(prevMaxCellPt, maxCellVtg, TopCellVtg, BotCellVtg, CellVtgsColor);
+			// Temperatures
+			prevMinTempPt = plotParam(prevMinTempPt, minCellTmp, TopTemper, BotTemper, TemperColor);
+			prevMaxTempPt = plotParam(prevMaxTempPt, maxCellTmp, TopTemper, BotTemper, TemperColor);
+			// SOC
+			prevSOC = plotParam(prevSOC, stateOfCharge, 100, 0, SOC_Color);
+			
+			// Place the column into the right-most column of the plot area
+			plotCanvasCtx.putImageData(plotLastRowData, PlotCanvasWidth-1, 0);							
+		}
+
+
+		function holdPeaks() { // Calculate energy and hold the peaks in the data
+			/* <<< CHANGE TO VINCI
+			// Energy
+			peakEnergy += packPower / 3600 / 1000; // [kWh]
+			
+			// Peak of the min and max cell voltages
+			var minCellVtg = extractData(variableData,MinCellVtgX);
+			if (minCellVtg < peakMinCellVtg) {peakMinCellVtg = minCellVtg; peakMinVtgCellNo = extractData(variableData,MinVtgCellNoX);}
+			var maxCellVtg = extractData(variableData,MaxCellVtgX);
+			if (maxCellVtg > peakMaxCellVtg) {peakMaxCellVtg = maxCellVtg; peakMaxVtgCellNo = extractData(variableData,MaxVtgCellNoX);}
+			// Peak of the min and max temperatures
+			var minCellTmp = extractData(variableData,MinCellTmpX);
+			if (minCellTmp < peakMinCellTmp) {peakMinCellTmp = minCellTmp; peakMinTmpCellNo = extractData(variableData,MinTmpCellNoX);}
+			var maxCellTmp = extractData(variableData,MaxCellTmpX);
+			if (maxCellTmp > peakMaxCellTmp) {peakMaxCellTmp = maxCellTmp; peakMaxTmpCellNo = extractData(variableData,MaxTmpCellNoX);}
+			*/
+		}
+
+
+		function showCellDetails(sender) { // The user clicked one of the bars in a histogram
+			var histogDetailsOvrly = document.getElementById('histogDetailsOvrly');
+			activeBar = sender; // Note which bar was clicked, so we may refresh its value over time
+			histogDetailsOvrly.style.visibility = 'visible';
+			// Place the overlay horizontally centered with the bar it refers to, and either just above or just below the bar's top edge
+			var barLeft = parseInt(sender.style.left.replace('px',''),10);
+			var barWidth = parseInt(sender.style.width.replace('px',''),10);
+			var detailsWidth = 86; 
+			var detailsHeight = 26; 
+			var mainWindowWidth = 468;
+			var detailsLeft = barLeft + barWidth / 2 - detailsWidth / 2 + 8;
+			if (detailsLeft < 0) {detailsLeft = 0;}
+			if (detailsLeft + detailsWidth > mainWindowWidth) {detailsLeft = mainWindowWidth - detailsWidth;}
+			histogDetailsOvrly.style.left = detailsLeft + 'px';
+			var barTop = parseInt(sender.style.top.replace('px',''),10);
+			var detailsTop = barTop - detailsHeight +3; // Try above the bar
+			if (detailsTop < 0) {detailsTop = barTop + 13;} // If no space, place below teh top of the bar
+			histogDetailsOvrly.style.top = detailsTop + 'px';
+			histogDetailsOvrly.innerHTML = '';
+		}
+
+
+		function hideCellsDetails() { // The user clicked on the cell details
+			document.getElementById('histogDetailsOvrly').style.visibility = 'hidden';
+		}
+
+
+		function toggleMeterOvrly(overlayName) { // Toggle the visibolity of a meter overlay
+			var overlayStyle = document.getElementById(overlayName).style;
+			overlayStyle.visibility = (overlayStyle.visibility!== 'visible')? 'visible' : 'hidden'; //
+		}
+		
+
+		function showOverlay(type) { // The user clicked on an element that starts showing or hiding an overlay
+			// Start by hiding all overlays
+			document.getElementById('histogOvrly').style.visibility = 'hidden';
+			document.getElementById('infoOvrly').style.visibility =  'hidden';
+			document.getElementById('settingsOvrly').style.visibility =  'hidden';
+			document.getElementById('captureOvrly').style.visibility =  'hidden';
+			document.getElementById('peakOvrly').style.visibility =  'hidden';
+			document.getElementById('plotOvrly').style.visibility =  'hidden';
+			document.getElementById('histogDetailsOvrly').style.visibility = 'hidden';
+			// Show any overaly, based on the type
+			switch (type) {
+				case ovrlyType: // Same type again: toggle it off
+					type = '';
+					break;
+				case 'Q': // Constants
+					document.getElementById('infoOvrly').style.visibility =  'visible';
+					break;
+				case 'A': // Alerts
+					document.getElementById('infoOvrly').style.visibility =  'visible';
+					break;
+				case 'V': // Voltages
+					document.getElementById('histogOvrly').style.visibility = 'visible';
+					break;
+				case 'T': // Temperatures
+					document.getElementById('histogOvrly').style.visibility = 'visible';
+					break;
+				case 'S': // Settings
+					document.getElementById('settingsOvrly').style.visibility =  'visible';
+					break;
+				case 'C': // Data capture
+					document.getElementById('captureOvrly').style.visibility =  'visible';
+					break;
+				case 'M': // Peak values
+					document.getElementById('peakOvrly').style.visibility =  'visible';
+					break;
+				case 'P': // Plot
+					document.getElementById('plotOvrly').style.visibility =  'visible';
+					break;
+			}
+			// Save the type so that we know what to update, and start updating the overlay
+			ovrlyType = type;
+			updOverlay();
+		}
+
+
+		function getCookie(c_name, defaultVal) { // Get a cookie's value
+			var c_value = document.cookie;
+			var c_start = c_value.indexOf(' ' + c_name + '=');
+			if (c_start === -1) {
+				c_start = c_value.indexOf(c_name + '=');
+			}
+			if (c_start === -1) {
+				c_value = defaultVal;
+			} else {
+				c_start = c_value.indexOf('=', c_start) + 1;
+				var c_end = c_value.indexOf(';', c_start);
+				if (c_end === -1) {
+					c_end = c_value.length;
+				}
+				c_value = unescape(c_value.substring(c_start,c_end));
+			}
+			return c_value;
+		}
+
+
+		function setCookie(c_name,value){ // Set a cookie's value
+			var exdate = new Date(2037,1,1,0,0,0,0);
+			var c_value = escape(value) + ';expires='+exdate.toUTCString();
+			document.cookie = c_name + '=' + c_value;
+		}
+
+
+		function currentMeterChanged(elementName,elementValue) { // The user made a change in the current meter settings: save them in cookies
+			setCookie(elementName,elementValue);
+			// Force setting the range of the current meter
+			currMtrRangeMin = 0; 
+			currMtrRangeMax = 0;
+		}
+
+		function vtgMeterChanged(elementName,elementValue) { // The user made a change in the voltage meter settings: save them in cookies
+			setCookie(elementName,elementValue);
+			// Force setting the range of the voltage meter
+			vtgMtrRange = 0;
+		}
+
+
+		function captureData() { // Capture data
+			/* <<< CHANGE TO VINCI
+			var cellNo;
+			// Time
+			capturedData += captureCntr + '\t'; // Point number
+			var timeNow = new Date();
+			capturedData += timeNow.toLocaleTimeString() + '\t'; // Real time
+			capturedData += extractData(variableData, PwrUpTimer3X) + '\t'; // Power-up time
+			// Pack SOC, current, voltage
+			capturedData += stateOfCharge.toFixed(1) + '\t';
+			capturedData += packCurrent.toFixed(1) + '\t';
+			capturedData += packVoltage.toFixed(0) + '\t';
+			// Cell voltages
+			capturedData += minCellVtg.toFixed(2) + '\t';
+			capturedData += extractData(variableData,MinVtgCellNoX) + '\t';
+			capturedData += extractData(variableData,AvgCellVtgX) + '\t';
+			capturedData += maxCellVtg.toFixed(2) + '\t';
+			capturedData += extractData(variableData,MaxVtgCellNoX) + '\t';
+			// Temperatures
+			capturedData += minCellTmp.toFixed(0) + '\t';
+			capturedData += extractData(variableData,MinTmpCellNoX) + '\t';
+			capturedData += extractData(variableData,AvgCellTmpX) + '\t';
+			capturedData += maxCellTmp.toFixed(0) + '\t';
+			capturedData += extractData(variableData,MaxTmpCellNoX) + '\t';
+			// Resistance
+			capturedData += extractData(variableData,MinCellResX) + '\t';
+			capturedData += extractData(variableData,MinResCellNoX ) + '\t';
+			capturedData += extractData(variableData,AvgCellResX) + '\t';
+			capturedData += extractData(variableData,MaxCellResX) + '\t';
+			capturedData += extractData(variableData,MaxResCellNoX ) + '\t';
+			capturedData += extractData(variableData,PackResistance2X) + '\t';
+			// IO state
+			capturedData += extractData(variableData, IoStateX).toString(2) + '\t';
+			// Balance
+			capturedData += extractData(variableData,NoOfLoadsOnX) + '\t';
+			capturedData += extractData(variableData,BalDisabCauseX) + '\t';
+			capturedData += extractData(variableData,LoadOnVtgX).toFixed(2) + '\t';
+			// Missing banks
+			var missBanksCode = extractData(variableData,MissBanksCodeX);
+			capturedData += missBanksCode % 16 + '\t';
+			capturedData += Math.floor(missBanksCode / 16) + '\t';
+			// Missing cells
+			capturedData += extractData(variableData,NoOfMissCellsX) + '\t';
+			capturedData += extractData(variableData,MissCellNoX) + '\t';
+			// Limits
+			capturedData += extractData(variableData,RelCCLX) + '\t';
+			capturedData += extractData(variableData,CclLimitCauseX) + '\t';
+			capturedData += extractData(variableData,RelDCLX) + '\t';
+			capturedData += extractData(variableData,DclLimitCauseX) + '\t';
+			// Warnings and faults
+			if (isLite) { // Lite
+				capturedData += extractData(variableData,WarningFlags2X).toString(2) + '\t';
+				capturedData += extractData(variableData,FaultFlags2X).toString(2) + '\t';
+			} else { // Pro
+				capturedData += extractData(variableData,WarningFlags).toString(2) + '\t';
+				capturedData += extractData(variableData,LvlFaultFlags).toString(2) + '\t';
+			}
+			// All cell voltages
+			for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+				capturedData += parseInt(voltageData.substr(2 * (cellNo + 1),2),16) * CellVtgsX[0] + CellVtgsX[1] + '\t';
+			}
+			// All cell temperatures
+			for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+				capturedData += parseInt(temperatureData.substr(2 * (cellNo + 1),2),16) * CellTempX[0] + CellTempX[1] + '\t';
+			}					
+
+			// Complete a data capture line
+			capturedData += '\n';
+			document.getElementById('captureTextArea').innerHTML = capturedData;
+			// Clock
+			document.getElementById('captureClock').innerHTML = captureCntr;
+			captureCntr += 1;
+			*/
+		}
+
+
+		function startDataCapture() { // Start capturing data
+			var cellNo;
+			// Header
+			capturedData = DataCaptureHeader;
+			
+			for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+				capturedData += 'Vtg ' + cellNo + '\t'; // All cell voltages
+			}
+			for (cellNo = 0; cellNo < noOfSeriesCells; cellNo++) { // For each cell
+				capturedData += 'Temp ' + cellNo + '\t'; // All cell temperatures
+			}		
+			capturedData += '\n';
+			
+			// Start repeated calls to capture data
+			captureCntr = 0;
+			captureOn = true;
+		}
+		
+
+		function toggleDataCapture() { // Toggle capturing data
+			captureOn = !captureOn;
+		}
+
+		
+		function stopDataCapture() { // Stop capturing data
+			captureOn = false;
+			// Select all text, to allow copying
+			document.getElementById('captureTextArea').select(); 
+		}
+		
+		
+
+		function oneSecTick() { // Handle a tick of the 1 second timer
+				holdPeaks(); // Calculate energy and hold the peaks in the data
+				if (captureOn) {captureData();} // Capture the data
+				plotData(); // Plot the data
+		}
+		
+
+		function initGui() { // Initialize the GUI
+			needle = new Image();
+			needle.src = 'needle.gif';
+			resetGui(); // Reset all the GUI controls
+			setInterval(function(){oneSecTick();},OneSecRate); // Timer that ticks once / s
+            bmsInit(); // jjc bms CGI init, refresh rate, etc
+
+			// Get the settings from the cookies
+			presetCheckBox('sourceCurrentMeterBidir','false'); // Source current meter bidirectional, default of 'not'
+			presetCheckBox('loadCurrentMeterBidir','false'); // Load current meter bidirectional, default of 'not'
+			presetRadioButton('sourceCurrMeterRange',50); // Source current meter range, default of 50 A
+			presetRadioButton('loadCurrMeterRange',500); // Load current meter range, default of 500 A
+			presetRadioButton('middleMeterFunction','current'); // Middle meter function, default of current
+			presetRadioButton('vtgMeterRange',200); // Voltmeter range, default of 200 V
+			
+			// Plot
+			// Main plot area
+			plotCanvas = document.getElementById("plotCanvas");
+			plotCanvasCtx = plotCanvas.getContext("2d");
+			plotCanvasCtx.fillStyle = 'gray'; 
+			plotCanvasCtx.fillRect(0,0,PlotCanvasWidth,PlotCanvasHeight);
+			// Right most row
+			plotLastRowData = plotCanvasCtx.createImageData(1, PlotCanvasHeight);
+			// Units tick mark and values
+			var plotUnitsCanvas = document.getElementById("plotUnitsCanvas");
+			var plotUnitsCanvasCtx = plotUnitsCanvas.getContext("2d");
+			plotUnitsCanvasCtx.fillStyle = 'black';
+			for(unitNo = 0; unitNo <= 10; unitNo++) {
+				plotUnitsCanvasCtx.fillRect(0,unitNo * 12,PlotUnitsCanvasWidth,1); // Tick
+				document.getElementById("plotUnit" + unitNo).style.top = 19 + (10 - unitNo) * 12 + 'px'; // Place them vertically
+			}
+			changePlotUnits(); // Preset the values of the units
+
+		}
+	
+
+	</script>
+	
+</head>
+
+
+
+<body onload="initGui()">
+	<div class="mainWindow">
+
+		<!-- Settings -->
+		<img src="settings.gif" id="settingsIcon" alt="Configure the GUI"  title="Settings" onClick="showOverlay('S')">
+		<img src="plot.gif" id="plotIcon" alt="Plot the data"  title="Settings" onClick="showOverlay('P')">
+
+
+		<!-- SOC -->
+		<div class="roundMeter socMeter" onClick="toggleMeterOvrly('socMeterOvrly')">
+			<img class="rounddial" src="rounddial.gif" alt="soc dial">
+			<div class="roundMeterLabel roundMeterItemLabel">SOC</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel0">0</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel1">10</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel2">20</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel3">30</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel4">40</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel5">50</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel6">60</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel7">70</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel8">80</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel9">90</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel10">100</div>
+			<canvas class="needleCanvas" id="needleCanvasSoc" height="100" width="100"></canvas>
+		</div>
+
+		<!-- Pack current -->
+		<div class="roundMeter currentMeter" onClick="toggleMeterOvrly('middleMeterOvrly')">
+			<img class="rounddial" src="rounddial.gif" alt="current dial">
+			<div class="roundMeterLabel roundMeterItemLabel" id="middleMeterUnits">Amp</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel0 roundMeterEndLabel" id="currMtrLbl0"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel1" id="currMtrLbl1"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel2" id="currMtrLbl2"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel3" id="currMtrLbl3"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel4" id="currMtrLbl4"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel5" id="currMtrLbl5"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel6" id="currMtrLbl6"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel7" id="currMtrLbl7"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel8" id="currMtrLbl8"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel9" id="currMtrLbl9"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel10 roundMeterEndLabel" id="currMtrLbl10"></div>
+			<canvas class="needleCanvas" id="needleCanvasCurr" height="100" width="100"></canvas>
+		</div>
+
+		<!-- Pack voltage -->
+		<div class="roundMeter voltageMeter" onClick="toggleMeterOvrly('vtgMeterOvrly')">
+			<img class="rounddial" src="rounddial.gif" alt="voltage dial">
+			<div class="roundMeterLabel roundMeterItemLabel">Volt</div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel0 roundMeterEndLabel" id="vtgMtrLbl0"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel1" id="vtgMtrLbl1"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel2" id="vtgMtrLbl2"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel3" id="vtgMtrLbl3"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel4" id="vtgMtrLbl4"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel5" id="vtgMtrLbl5"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel6" id="vtgMtrLbl6"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel7" id="vtgMtrLbl7"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel8" id="vtgMtrLbl8"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel9" id="vtgMtrLbl9"></div>
+			<div class="roundMeterLabel roundMeterValLabel roundMeterValLabel10 roundMeterEndLabel" id="vtgMtrLbl10"></div>
+			<canvas class="needleCanvas" id="needleCanvasVolt" height="100" width="100"></canvas>
+		</div>
+
+
+		<!-- Data capture, Peak values -->
+		<img src="recording.gif" id="recordingIcon" alt="Capture data" title="Capture data" onClick="showOverlay('C')">
+		<img src="peak.gif" id="peakIcon" alt="Peak values" title="Peak value" onClick="showOverlay('M')">
+
+		<!-- Logo -->
+		<div class="logo" onClick="showOverlay('Q')">
+			<img class="logo" src="logo.png" alt="elithion logo">
+			<span id="connectionStatus"><noscript>Javascript required</noscript></span>
+		</div>
+
+		<!-- Status boxes	 -->
+		<img class="statusBox chargeOkStatus"    src="nostatus.png" id="chargeOkStatus"    alt="Charge ok">
+		<img class="statusBox dischargeOkStatus" src="nostatus.png" id="dischargeOkStatus" alt="Discharge ok">
+		<img class="statusBox powerStatus"       src="nostatus.png" id="powerStatus"       alt="Power status">
+		<img class="statusBox alertStatus"       src="nostatus.png" id="alertStatus"       alt="Alert status"  onClick="showOverlay('A')">
+
+		<!-- Temperature , cell voltages -->
+		<div class="numberMeter cellTemper" onClick="showOverlay('T')"><span id="cellTemper"></span> &deg;C&nbsp;</div>
+		<div class="numberMeter cellVoltages" onClick="showOverlay('V')"><span id="cellVoltages"></span> V&nbsp;</div>
+
+		<!-- Blip -->
+		<div id="blip"></div>
+
+		<!-- Overlays -->
+		<div class="overLay meterOverLay socMeterOvrly" id="socMeterOvrly" onClick="toggleMeterOvrly('socMeterOvrly')"></div>
+		<div class="overLay meterOverLay middleMeterOvrly" id="middleMeterOvrly" onClick="toggleMeterOvrly('middleMeterOvrly')"></div>
+		<div class="overLay meterOverLay vtgMeterOvrly" id="vtgMeterOvrly" onClick="toggleMeterOvrly('vtgMeterOvrly')"></div>
+		<div class="overLay wideOverlay" id="infoOvrly"   onClick="showOverlay('')"></div>
+		<div class="overLay wideOverlay" id="histogOvrly"></div>
+		<div class="overLay detailsOverLay" id="histogDetailsOvrly" onClick="hideCellsDetails()"></div>
+		<div class="overLay wideOverlay" id="settingsOvrly">		
+			<img src="closebox.gif" class="closeBox" alt="close box" onClick="showOverlay('')">
+			<b>GUI settings:</b>
+			<br>
+			<form id="settingsForm">
+				Current meter range [A]:
+				<br>
+				Source: 
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',25)" value="25">25</label>
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',50)" value="50" checked>50</label>
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',100)" value="100">100</label>
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',250)" value="250">250</label>
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',500)" value="500">500</label>
+				<label><input type="radio" name="sourceCurrMeterRange" onClick="currentMeterChanged('sourceCurrMeterRange',1000)" value="1000">1000</label>
+				<label><input type="checkBox" name="sourceCurrentMeterBidir" id="sourceCurrentMeterBidir" onClick="currentMeterChanged('sourceCurrentMeterBidir',this.checked)">bidirectional</label>
+				<br>
+				Load:
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',25)" value="25">25</label>
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',50)" value="50">50</label>
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',100)" value="100">100</label>
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',250)" value="250">250</label>
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',500)" value="500" checked>500</label>
+				<label><input type="radio" name="loadCurrMeterRange" onClick="currentMeterChanged('loadCurrMeterRange',1000)" value="1000">1000</label>
+				<label><input type="checkBox" name="loadCurrentMeterBidir" id="loadCurrentMeterBidir" onClick="currentMeterChanged('loadCurrentMeterBidir',this.checked)">bidirectional</label>
+				<br>
+				Middle meter:
+				<label><input type="radio" name="middleMeterFunction" onClick="currentMeterChanged('middleMeterFunction','current')" value="current" checked id="middleMeterCurrent">Current</label>
+				<label><input type="radio" name="middleMeterFunction" onClick="currentMeterChanged('middleMeterFunction','power')" value="power">Power</label>
+				<br>
+				Voltmeter range [V]:
+				<br>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',25)" value="25">25</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',50)" value="50">50</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',100)" value="100">100</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',250)" value="250" checked>250</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',500)" value="500">500</label>
+				<label><input type="radio" name="vtgMeterRange" onClick="vtgMeterChanged('vtgMeterRange',1000)" value="1000">1000</label>
+				<br>
+			</form>
+		</div>
+		<div class="overLay wideOverlay" id="captureOvrly">
+			<img src="closebox.gif" class="closeBox" alt="close box" onClick="showOverlay('')">
+			<b>Data capture:</b>
+			<br>
+			<img src="recordBtn.gif" class="captureBtn" alt="Start capturing data" onClick="startDataCapture()">
+			<img src="pauseBtn.gif" class="captureBtn" alt="Pause capturing data" onClick="toggleDataCapture()">
+			<img src="stopBtn.gif" class="captureBtn" alt="Stop capturing data" onClick="stopDataCapture()">
+			<div id='captureClock'>000</div>
+			Capture, stop, copy text below, paste in spreadsheet.
+			<br>
+			<textarea id="captureTextArea" rows="4" cols="53" wrap="soft"></textarea> 
+		</div>
+		<div class="overLay wideOverlay" id="peakOvrly">
+			<img src="closebox.gif" class="closeBox" alt="close box" onClick="showOverlay('')">
+			<b>Peak values:</b>
+			<br>
+			Minimum / maximum values since this page opened (refresh to reset)
+			<br>
+			<div class="peakList">
+				Cell voltage [V]: <span id="peakMinVtg"></span> min (#<span id="peakMinVtgNo"></span>), <span id="peakMaxVtg"></span> max (#<span id="peakMaxVtgno"></span>)
+				<br>
+				Temperature [&deg;]: <span id="peakMinTemp"></span> min (#<span id="peakMinTempNo"></span>), <span id="peakMaxTemp"></span> max (#<span id="peakMaxTempno"></span>)
+				<br>
+				Pack voltage [V]: <span id="peakMinPackVtg"></span> min, <span id="peakMaxPackVtg"></span> max
+				<br>
+				Pack current [A]: <span id="peakMaxChgCurrVtg"></span> charge, <span id="peakMaxDchCurrVtg"></span> discharge
+				<br>
+				Pack power [W]: <span id="peakChgPackPower"></span> charge, <span id="peakDchPackPower"></span> discharge
+				<br>
+				Energy [kWh]: <span id="peakEnergy"></span>; SOC [%]: <span id="peakMinSOC"></span> min
+			</div>
+		</div>
+		<div class="overLay wideOverlay" id="plotOvrly">
+			<img src="closebox.gif" class="closeBox" alt="close box" onClick="showOverlay('')">
+			<b>Plot:</b>
+			<label><input type="radio" name="plotUnitsBtns" id="plotCurrent"     onClick="changePlotUnits()"><font size=-1 color="red"   >Current A     </font></label>
+			<label><input type="radio" name="plotUnitsBtns" id="plotPackVtg"     onClick="changePlotUnits()"><font size=-1 color="green" >Pack vtg. V   </font></label>
+			<label><input type="radio" name="plotUnitsBtns" id="plotCellVtgs"    onClick="changePlotUnits()"><font size=-1 color="lime"  >Cell vtgs.V   </font></label>
+			<label><input type="radio" name="plotUnitsBtns" id="plotTemper"      onClick="changePlotUnits()"><font size=-1 color="orange">Temper. &deg;C</font></label>
+			<label><input type="radio" name="plotUnitsBtns" id="plotSOC" checked onClick="changePlotUnits()"><font size=-1 color="violet">SOC %         </font></label>
+			<br>
+			<canvas id="plotCanvas" width=425 height=121></canvas>
+			<canvas id="plotUnitsCanvas" width=5 height=121></canvas>
+			<div class="plotUnits" id="plotUnit10">100</div>
+			<div class="plotUnits" id="plotUnit9">90</div>
+			<div class="plotUnits" id="plotUnit8">80</div>
+			<div class="plotUnits" id="plotUnit7">70</div>
+			<div class="plotUnits" id="plotUnit6">60</div>
+			<div class="plotUnits" id="plotUnit5">50</div>
+			<div class="plotUnits" id="plotUnit4">40</div>
+			<div class="plotUnits" id="plotUnit3">30</div>
+			<div class="plotUnits" id="plotUnit2">20</div>
+			<div class="plotUnits" id="plotUnit1">10</div>
+			<div class="plotUnits" id="plotUnit0">0</div>
+		</div>
+		
+	</div>
+
+	&nbsp;<br>
+	<div id="testDiv"></div>
+	&nbsp;<br>
+
+</body>
+</html>
