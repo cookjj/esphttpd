@@ -64,7 +64,9 @@ int ICACHE_FLASH_ATTR tplLed(HttpdConnData *connData, char *token, void **arg) {
 
 
 int ICACHE_FLASH_ATTR
-cgiBms(HttpdConnData *connData) {
+cgiBms(HttpdConnData *connData)
+    /* by JJC */
+{
 	int len_tot;
 	char buff[1024];
     char single_val_buf[8];
@@ -73,7 +75,6 @@ cgiBms(HttpdConnData *connData) {
 		//Connection aborted. Clean up.
 		return HTTPD_CGI_DONE;
 	}
-
 
     httpdStartResponse(connData, 200);
     httpdHeader(connData, "Content-Type", "text/json");
@@ -116,3 +117,5 @@ int ICACHE_FLASH_ATTR tplCounter(HttpdConnData *connData, char *token, void **ar
 	httpdSend(connData, buff, -1);
 	return HTTPD_CGI_DONE;
 }
+
+

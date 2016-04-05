@@ -28,9 +28,12 @@ static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is c
 #define WIFICFG_IN_MSB true
 
 #define SSID_MAX_CHARS 32
+#define SSID_PW_MAX_CHARS 64
 
 #define SZ_NODE_PREFIX "vinci_"
 static char my_nodename[SSID_MAX_CHARS];
+static char join_ssid[SSID_MAX_CHARS] = "elithion belkin"; // testing
+static char join_ssid_pw[SSID_PW_MAX_CHARS] = "L110nBMS"; //testing
 
 typedef union {
     struct __attribute__((packed)) {
@@ -47,13 +50,32 @@ enum sys_wifi_mode {
     WM_STATIONAP_MODE,  // Station + Access Point
 };
 
+enum {
+    CONNTRY_IDLE,
+    CONNTRY_WORKING,
+    CONNTRY_SUCCESS,
+    CONNTRY_FAIL
+};
+
+static int sta_connect_status = CONNTRY_IDLE;
+static struct station_config stconf; // Station setup struct
+static os_timer_t raTimer;
+static os_timer_t rstTimer;
+
+
 /* We get these two options from BMS for AP v. STA mode */
 #define MSG_DEVMODE_STATION 0
 #define MSG_DEVMODE_AP 1
 
 uint8_t static hexchar_to_nyb(uint8_t);
 void static convert_rx_to_bin_and_store(uint8_t *, uint8_t);
+static void ICACHE_FLASH_ATTR bms_wifi_sta_connect(void);
 
+static void ICACHE_FLASH_ATTR rstTimerCb(void *arg);
+static void ICACHE_FLASH_ATTR raTimerCb(void *arg);
+
+
+/******************************************************************************/
 
 uint8_t ICACHE_FLASH_ATTR
 bms_numel_get(void)
@@ -164,7 +186,6 @@ bms_wifi_cfg_update(void)
 {
     uint8_t cur_mode, msg_mode;
     struct softap_config c;
-    struct station_config sta_conf;
     dev_wifi_cfg_t wifi_mode_msg;
 
     /* Check that we have some elements in memory before
@@ -177,11 +198,9 @@ bms_wifi_cfg_update(void)
     cur_mode = wifi_get_opmode(); // get current wifi setup info
     wifi_mode_msg.byte = (uint8_t) (param_values[the_good_buffer][ARRAY_OFST_WIFI_CFG] >> 8);
 
-    /* create standard name based on received batt_number */
+    /* create standard name for SSID or hostname use based on received batt_number */
     sprintf(my_nodename, SZ_NODE_PREFIX "%d", wifi_mode_msg.dev_num);
     msg_mode = wifi_mode_msg.dev_mode;
-
-//    printf("...%s...(%d octets).", my_nodename, strlen(my_nodename));
 
     /* convert from msg binary code for mode to system mode code */
     if(msg_mode == MSG_DEVMODE_STATION) {
@@ -194,8 +213,9 @@ bms_wifi_cfg_update(void)
     if(cur_mode != msg_mode) {
 
         if(msg_mode == WM_STATION_MODE) {
-            if(wifi_station_get_config(&sta_conf)) {
-
+            /* change to station mode if not busy trying already */
+            if(sta_connect_status == CONNTRY_IDLE) {
+                bms_wifi_sta_connect();
             }
 
         } else { /* Soft AP mode */
@@ -206,7 +226,7 @@ bms_wifi_cfg_update(void)
                  * resemble our custom one... */
                 if(strncmp((char *)c.ssid, my_nodename, SSID_MAX_CHARS)) {
                     /* copy our ssid to config struct, but not \0 at end!!! */
-                    memcpy(c.ssid, my_nodename, strlen(my_nodename) + 1);
+                    memcpy(c.ssid, my_nodename, strlen(my_nodename));
                     /* set config */
                     wifi_softap_set_config(&c);
 
@@ -234,6 +254,63 @@ bms_wifi_cfg_update(void)
     return;
 }
 
+//This routine is run some time after a connection attempt to an access point. If
+//the connect succeeds, this gets the module in STA-only mode.
+static void ICACHE_FLASH_ATTR
+rstTimerCb(void *arg)
+{
+    int x = wifi_station_get_connect_status();
+    if (x == STATION_GOT_IP) {
+        //Go to STA mode. This needs a reset, so do that.
+        httpd_printf("Got IP. Going into STA mode..\n");
+        wifi_set_opmode(WM_STATION_MODE);
+        system_restart();
+    } else {
+//        connTryStatus=CONNTRY_FAIL;
+        connTryStatus = CONNTRY_IDLE; // will trigger retry in main communications function --jjc
+        httpd_printf("Connect fail.\n");
+    }
+}
+
+
+
+static void ICACHE_FLASH_ATTR
+raTimerCb(void *arg)
+{
+    int x;
+    httpd_printf("Try to connect to AP %s\n", stconf.ssid);
+
+    wifi_station_disconnect();
+    wifi_station_set_config(&stconf);
+    wifi_station_connect();
+
+    x = wifi_get_opmode();
+    connTryStatus = CONNTRY_WORKING;
+    if(x != WM_STATION_MODE) {
+        //Schedule disconnect/connect
+        os_timer_disarm(&rstTimer);
+        os_timer_setfn(&rstTimer, rstTimerCb, NULL);
+        os_timer_arm(&rstTimer, 15000, 0); //time out after 15 secs of trying to connect
+    }
+    return;
+}
+
+
+static void ICACHE_FLASH_ATTR
+bms_wifi_sta_connect(void)
+/* start trying to connect to an access point */
+{
+    printf("Saving station values...\n");
+    memcpy(stconf.ssid, join_ssid, strlen(join_ssid)); // Do not copy \0 at end
+    memcpy(stconf.password, join_ssid_pw, strlen(join_ssid_pw)); // Do not copy \0 at end
+
+    //Schedule disconnect/connect
+    os_timer_disarm(&raTimer);
+    os_timer_setfn(&raTimer, raTimerCb, NULL);
+    os_timer_arm(&reassTimer, 500, 0);
+
+    return;
+}
 
 void
 bms_rx_data(uint8_t *data, int len)
