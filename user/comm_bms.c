@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <esp8266.h>
 #include "httpd.h"
+#include "comm_bms.h"
 #include "io.h"
 
 /* this attribute is essential for global storage arrays */
@@ -17,19 +18,41 @@
 
 /* Double buffer of param data words */
 uint16_t ICACHE_STORE_ATTR param_values[2][BMS_DATA_PARM_VALS_MAX];
+static uint8_t actual_numel[2] = {0}; /* actual num elements in buf 0, 1 */
+static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is complete */
 
 #define RX_SOT '<' /* start of text for serial protocol */
 #define RX_EOT '>' /* end of text for serial protocol */
 
-static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is complete */
-static uint8_t actual_numel[2] = {0}; /* actual num elements in buf 0, 1 */
-
 #define ARRAY_OFST_WIFI_CFG 0 /* 0th byte in message array for wifi options */
+#define WIFICFG_IN_MSB true
 
+#define SSID_MAX_CHARS 32
+
+#define SZ_NODE_PREFIX "vinci_"
+static char my_nodename[SSID_MAX_CHARS];
+
+typedef union {
+    struct __attribute__((packed)) {
+        unsigned dev_num : 7;
+        unsigned dev_mode : 1;
+    };
+    uint8_t byte;
+} dev_wifi_cfg_t;
+
+enum sys_wifi_mode {
+    WM_NULL_MODE,   // NULL
+    WM_STATION_MODE,    // Station
+    WM_SOFTAP_MODE,     // Access Point
+    WM_STATIONAP_MODE,  // Station + Access Point
+};
+
+/* We get these two options from BMS for AP v. STA mode */
+#define MSG_DEVMODE_STATION 0
+#define MSG_DEVMODE_AP 1
 
 uint8_t static hexchar_to_nyb(uint8_t);
 void static convert_rx_to_bin_and_store(uint8_t *, uint8_t);
-
 
 
 uint8_t ICACHE_FLASH_ATTR
@@ -129,23 +152,73 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
         the_good_buffer = 0;
     }
 
+    bms_wifi_cfg_update();
 
-    // TODO : get wifi config mode
+    return;
+}
 
+
+void
+ICACHE_FLASH_ATTR
+bms_wifi_cfg_update(void)
+{
+    uint8_t cur_mode, msg_mode;
+    struct softap_config c;
+    struct station_config sta_conf;
+    dev_wifi_cfg_t wifi_mode_msg;
+
+    /* Check that we have some elements in memory before
+     * looking for a difference in configuration. */
+    if(! (actual_numel[the_good_buffer] > ARRAY_OFST_WIFI_CFG)) {
+        /* not enough data yet */
+        return;
+    }
+
+    cur_mode = wifi_get_opmode(); // get current wifi setup info
+    wifi_mode_msg.byte = (uint8_t) (param_values[the_good_buffer][ARRAY_OFST_WIFI_CFG] >> 8);
+
+    /* create standard name based on received batt_number */
+    sprintf(my_nodename, SZ_NODE_PREFIX "%d", wifi_mode_msg.dev_num);
+    msg_mode = wifi_mode_msg.dev_mode;
+
+//    printf("...%s...(%d octets).", my_nodename, strlen(my_nodename));
+
+    /* convert from msg binary code for mode to system mode code */
+    if(msg_mode == MSG_DEVMODE_STATION) {
+        msg_mode = WM_STATION_MODE;
+    } else {
+        msg_mode = WM_SOFTAP_MODE;
+    }
+
+    /* see if hw is in different mode currently than we want cfg'd */
+    if(cur_mode != msg_mode) {
+
+        if(msg_mode == WM_STATION_MODE) {
+            if(wifi_station_get_config(&sta_conf)) {
+
+            }
+
+        } else { /* Soft AP mode */
+
+            /* Try get AP config details */
+            if(wifi_softap_get_config(&c)) {
+                /* if it looks like current AP network name doesn't
+                 * resemble our custom one... */
+                if(strncmp((char *)c.ssid, my_nodename, SSID_MAX_CHARS)) {
+                    /* copy our ssid to config struct, but not \0 at end!!! */
+                    memcpy(c.ssid, my_nodename, strlen(my_nodename) + 1);
+                    /* set config */
+                    wifi_softap_set_config(&c);
+
+                    /* restart wifi */
+                    system_restart();
+                }
+            }
+        }//end softap mode change
+    }
 
 
 #if 0
-    /* misc stuff on get good data */
-    uint8_t mod;
-    uint16_t batt_number;
-    char batt_ssid_name[32];
-
-    batt_number = param_values[the_good_buffer][0];
-
-    /* create standard name based on received batt_number */
-    sprintf(batt_ssid_name, "Batt_%d", batt_number);
-
-    mod = wifi_get_opmode();
     if(mod == 1) {
         printf("BMS: wifi opmode is 1 (station).\n");
         char *hn;
@@ -154,22 +227,6 @@ convert_rx_to_bin_and_store(uint8_t *buf, uint8_t len)
         if(hn != NULL && strncmp(hn, batt_ssid_name, 5)) {
             printf("BMS: setting hostname %s\n", batt_ssid_name);
             wifi_station_set_hostname(batt_ssid_name);
-        }
-    }
-#endif
-
-#if 0
-    struct softap_config c;
-    if(wifi_softap_get_config(&c)) {
-        /* if it looks like we not named us already... */
-        if(strncmp((char *)c.ssid, "Batt_", 5)) {
-            /* copy to config struct */
-            strncpy((char *)c.ssid, batt_ssid_name, 31);
-            /* set config */
-            wifi_softap_set_config(&c);
-
-            /* restart wifi */
-            system_restart();
         }
     }
 #endif

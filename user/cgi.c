@@ -97,7 +97,6 @@ cgiBms(HttpdConnData *connData) {
     len_tot += sprintf(single_val_buf, "]}");
     strcat(buff, single_val_buf);
 
-    printf("Sennding BMS cgi datas of len %d: ...%s...\n", len_tot, buff);
     httpdSend(connData, buff, len_tot);
     return HTTPD_CGI_DONE;
 }

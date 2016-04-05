@@ -122,7 +122,7 @@ should be placed above the URLs they protect.
 */
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
-	{"/", cgiRedirect, "/lgui/index.html"},
+	{"/", cgiRedirect, "/index.html"},
 	{"/flash.bin", cgiReadFlash, NULL},
 	{"/led.tpl", cgiEspFsTemplate, tplLed},
 	{"/index.tpl", cgiEspFsTemplate, tplCounter},
@@ -193,8 +193,11 @@ void user_init(void) {
 	os_timer_arm(&websockTimer, 1000, 1);
 	os_printf("\nReady\n");
 
+    // JJC Added uart init.
     uart_init(BIT_RATE_57600, BIT_RATE_57600);
     uart_register_data_callback(bms_rx_data);
+
+    //possibly: bms_wifi_cfg_update();
 
     return;
 }
