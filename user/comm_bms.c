@@ -11,7 +11,7 @@
 
 
 /* How many param data _words_ we can deal with max: keeps Rx buffer under 256 bytes */
-#define BMS_DATA_PARM_VALS_MAX 60
+#define BMS_DATA_PARM_VALS_MAX 120
 
 /* 2 bytes per word and 2 chars per byte in serial ascii received data */
 #define MAX_DATA_LEN_BYTES (BMS_DATA_PARM_VALS_MAX * 4)
@@ -21,6 +21,9 @@ uint16_t ICACHE_STORE_ATTR param_values[2][BMS_DATA_PARM_VALS_MAX];
 static uint8_t actual_numel[2] = {0}; /* actual num elements in buf 0, 1 */
 static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is complete */
 
+struct ip_info ipconfig;
+struct mdns_info info;// = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
+
 #define RX_SOT '<' /* start of text for serial protocol */
 #define RX_EOT '>' /* end of text for serial protocol */
 
@@ -29,11 +32,13 @@ static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is c
 
 #define SSID_MAX_CHARS 32
 #define SSID_PW_MAX_CHARS 64
+#define ARRAY_OFST_SSID_CFG 14
+#define ARRAY_OFST_SSID_PW_CFG (ARRAY_OFST_SSID_CFG + 16)
 
 #define SZ_NODE_PREFIX "vinci_"
 static char my_nodename[SSID_MAX_CHARS];
-static char join_ssid[SSID_MAX_CHARS] = "elithion belkin"; // testing
-static char join_ssid_pw[SSID_PW_MAX_CHARS] = "L110nBMS"; //testing
+static char join_ssid[SSID_MAX_CHARS+1]; // max + a null byte for sys usage
+static char join_ssid_pw[SSID_PW_MAX_CHARS+1]; // max + a null byte for internal use
 
 typedef union {
     struct __attribute__((packed)) {
@@ -74,6 +79,7 @@ static void ICACHE_FLASH_ATTR bms_wifi_sta_connect(void);
 static void ICACHE_FLASH_ATTR rstTimerCb(void *arg);
 static void ICACHE_FLASH_ATTR raTimerCb(void *arg);
 
+bool once = false;
 
 /******************************************************************************/
 
@@ -212,44 +218,102 @@ bms_wifi_cfg_update(void)
     /* see if hw is in different mode currently than we want cfg'd */
     if(cur_mode != msg_mode) {
 
+        printf("cur_mode .NE. msg_mode...\n");
+
         if(msg_mode == WM_STATION_MODE) {
+
             /* change to station mode if not busy trying already */
             if(sta_connect_status == CONNTRY_IDLE) {
+                printf("station connect idle, try connect...\n");
                 bms_wifi_sta_connect();
             }
 
         } else { /* Soft AP mode */
 
+            printf("softAP mode plz.  ");
+
             /* Try get AP config details */
             if(wifi_softap_get_config(&c)) {
+                printf("softAP:got config.  ");
                 /* if it looks like current AP network name doesn't
                  * resemble our custom one... */
                 if(strncmp((char *)c.ssid, my_nodename, SSID_MAX_CHARS)) {
+                    printf("softAP: set config/SSID. n");
                     /* copy our ssid to config struct, but not \0 at end!!! */
                     memcpy(c.ssid, my_nodename, strlen(my_nodename));
                     /* set config */
                     wifi_softap_set_config(&c);
 
+                    wifi_set_opmode(WM_SOFTAP_MODE);
+                    /* restart wifi */
+                    system_restart();
+                } else {
+                    /* get out of hybrid AP?STA mode, and into soft AP only */
+                    wifi_set_opmode(WM_SOFTAP_MODE);
                     /* restart wifi */
                     system_restart();
                 }
             }
+            printf("\n");
         }//end softap mode change
     }
 
 
+    /* do hostname as station */
+    if(cur_mode == msg_mode && cur_mode == WM_STATION_MODE) {
 #if 0
-    if(mod == 1) {
-        printf("BMS: wifi opmode is 1 (station).\n");
         char *hn;
         hn = wifi_station_get_hostname();
-        printf("BMS: chekcing hostname.\n");
-        if(hn != NULL && strncmp(hn, batt_ssid_name, 5)) {
-            printf("BMS: setting hostname %s\n", batt_ssid_name);
-            wifi_station_set_hostname(batt_ssid_name);
+        printf("sta: chekcing hostname. is '%s'.\n", wifi_station_get_hostname());
+        if(hn != NULL && !strncmp(hn, my_nodename, strlen(my_nodename))) {
+            printf("hostname already set %s\n", my_nodename);
+        } else {
+            printf("set hostname '%s' ...", my_nodename);
+            if(wifi_station_set_hostname(my_nodename))
+                printf("successs!\n");
+            else
+                printf("fail !\n");
         }
+#else
+
+    once = 1; // no go now
+    if(once != 1){
+
+        wifi_get_ip_info(STATION_IF, &ipconfig);
+        if(ipconfig.ip.addr == 0l) { once = 0;
+        } else {
+            once = 1;
+
+            info.host_name = "espress";
+            info.ipAddr = ipconfig.ip.addr; //station ip
+
+            info.server_name = "espLux";
+            info.server_port = 80;
+            info.txt_data[0] = "ver0.1";
+            info.txt_data[1] = NULL;
+            espconn_mdns_init(&info);
+        }
+
     }
+
 #endif
+    }
+
+    // All 32words / 64 byte of PW, nul padded if necessary, must be sent to be valid
+    if((actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG)){// + SSID_PW_MAX_CHARS/2)) {
+        char *ssid_begin, *pw_begin;
+        ssid_begin = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_CFG];
+        pw_begin   = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_PW_CFG];
+        strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
+        strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
+        join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
+        join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
+
+        printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
+    } else {
+//        printf("actual numel: %d", actual_numel[the_good_buffer]);
+    }
+
 
     return;
 }
@@ -263,11 +327,13 @@ rstTimerCb(void *arg)
     if (x == STATION_GOT_IP) {
         //Go to STA mode. This needs a reset, so do that.
         httpd_printf("Got IP. Going into STA mode..\n");
-        wifi_set_opmode(WM_STATION_MODE);
+
+        wifi_station_set_reconnect_policy(true);
+        wifi_station_set_auto_connect(true);
         system_restart();
     } else {
-//        connTryStatus=CONNTRY_FAIL;
-        connTryStatus = CONNTRY_IDLE; // will trigger retry in main communications function --jjc
+//        sta_connect_status=CONNTRY_FAIL;
+        sta_connect_status = CONNTRY_IDLE; // will trigger retry in main communications function --jjc
         httpd_printf("Connect fail.\n");
     }
 }
@@ -280,12 +346,16 @@ raTimerCb(void *arg)
     int x;
     httpd_printf("Try to connect to AP %s\n", stconf.ssid);
 
+    wifi_set_opmode(WM_STATION_MODE);
+
     wifi_station_disconnect();
+
     wifi_station_set_config(&stconf);
     wifi_station_connect();
 
+    sta_connect_status = CONNTRY_WORKING;
+
     x = wifi_get_opmode();
-    connTryStatus = CONNTRY_WORKING;
     if(x != WM_STATION_MODE) {
         //Schedule disconnect/connect
         os_timer_disarm(&rstTimer);
@@ -300,14 +370,16 @@ static void ICACHE_FLASH_ATTR
 bms_wifi_sta_connect(void)
 /* start trying to connect to an access point */
 {
+    sta_connect_status = CONNTRY_WORKING;
     printf("Saving station values...\n");
-    memcpy(stconf.ssid, join_ssid, strlen(join_ssid)); // Do not copy \0 at end
-    memcpy(stconf.password, join_ssid_pw, strlen(join_ssid_pw)); // Do not copy \0 at end
+    strncpy((char *)stconf.ssid, join_ssid, sizeof(join_ssid) - 1); // need zero termination string for OS
+    strncpy((char *)stconf.password, join_ssid_pw, sizeof(join_ssid_pw)); // need zero term str
+    stconf.bssid_set = false; // see user_interface.h for more info
 
     //Schedule disconnect/connect
     os_timer_disarm(&raTimer);
     os_timer_setfn(&raTimer, raTimerCb, NULL);
-    os_timer_arm(&reassTimer, 500, 0);
+    os_timer_arm(&raTimer, 500, 0);
 
     return;
 }
@@ -315,7 +387,7 @@ bms_wifi_sta_connect(void)
 void
 bms_rx_data(uint8_t *data, int len)
 {
-    static uint8_t rx_buf[256];  /* Serial protocol receive buffer. Only data text and not text control values are stored */
+    static uint8_t rx_buf[512];  /* Serial protocol receive buffer. Only data text and not text control values are stored */
     static uint8_t rx_idx = 0;  /* byte count for stored data text values in rx_buf */
     static uint8_t got_eot = 0; /* flag if EOT char has been received */
     static uint8_t check;       /* xor additive checksum of rx_buf bytes */

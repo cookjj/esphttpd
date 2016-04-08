@@ -197,8 +197,6 @@ void user_init(void) {
     uart_init(BIT_RATE_57600, BIT_RATE_57600);
     uart_register_data_callback(bms_rx_data);
 
-    //possibly: bms_wifi_cfg_update();
-
     return;
 }
 
