@@ -216,7 +216,7 @@ bms_wifi_cfg_update(void)
     }
 
     /* see if hw is in different mode currently than we want cfg'd */
-    if(cur_mode != msg_mode) {
+    if(cur_mode != msg_mode) { // || param_values[1][0] != param_values[0][0]) {
 
         printf("cur_mode .NE. msg_mode...\n");
 
@@ -224,6 +224,7 @@ bms_wifi_cfg_update(void)
 
             /* change to station mode if not busy trying already */
             if(sta_connect_status == CONNTRY_IDLE) {
+
                 printf("station connect idle, try connect...\n");
                 bms_wifi_sta_connect();
             }
@@ -238,9 +239,11 @@ bms_wifi_cfg_update(void)
                 /* if it looks like current AP network name doesn't
                  * resemble our custom one... */
                 if(strncmp((char *)c.ssid, my_nodename, SSID_MAX_CHARS)) {
-                    printf("softAP: set config/SSID. n");
-                    /* copy our ssid to config struct, but not \0 at end!!! */
-                    memcpy(c.ssid, my_nodename, strlen(my_nodename));
+                    /* copy our ssid to config struct */
+                    strncpy((char *)c.ssid, my_nodename, 10); // 10 bytes appears to be max held by this chip
+                    printf("softAP: set config/SSID. Nodename: '%s'\n", my_nodename);
+                    c.ssid_len = strlen(my_nodename);
+
                     /* set config */
                     wifi_softap_set_config(&c);
 
@@ -259,8 +262,42 @@ bms_wifi_cfg_update(void)
     }
 
 
-    /* do hostname as station */
+    char *ssid_begin, *pw_begin;
+    ssid_begin = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_CFG];
+    pw_begin   = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_PW_CFG];
+
+
+    if(actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG) {
+        join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
+        join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
+        printf("\nrx: ssid '%s' pw '%s'\n\n", ssid_begin, pw_begin);
+    }
+
+    /* do station mode adjustments */
     if(cur_mode == msg_mode && cur_mode == WM_STATION_MODE) {
+
+        // All 32words / 64 byte of PW, nul padded if necessary, must be sent to be valid
+        if((actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG)){// + SSID_PW_MAX_CHARS/2)) {
+            strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
+            strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
+            join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
+            join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
+
+            printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
+
+            // reconnect to new SSID although we was Station already :x
+            bms_wifi_sta_connect();
+
+        } else {
+    //        printf("actual numel: %d", actual_numel[the_good_buffer]);
+        }
+
+
+
+
+
+
+
 #if 0
         char *hn;
         hn = wifi_station_get_hostname();
@@ -297,21 +334,6 @@ bms_wifi_cfg_update(void)
     }
 
 #endif
-    }
-
-    // All 32words / 64 byte of PW, nul padded if necessary, must be sent to be valid
-    if((actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG)){// + SSID_PW_MAX_CHARS/2)) {
-        char *ssid_begin, *pw_begin;
-        ssid_begin = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_CFG];
-        pw_begin   = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_PW_CFG];
-        strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
-        strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
-        join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
-        join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
-
-        printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
-    } else {
-//        printf("actual numel: %d", actual_numel[the_good_buffer]);
     }
 
 
@@ -439,6 +461,8 @@ bms_rx_data(uint8_t *data, int len)
                     // and definitely not the partial message loop parameters data,len
                     printf("Good check.\n");
                     convert_rx_to_bin_and_store(rx_buf, rx_idx);
+                } else {
+                    printf("Bad check.\n");
                 }
 
 #if 0
