@@ -22,7 +22,7 @@ static uint8_t actual_numel[2] = {0}; /* actual num elements in buf 0, 1 */
 static uint8_t the_good_buffer = 0; /* 0 or 1 for which param_values buffer is complete */
 
 struct ip_info ipconfig;
-struct mdns_info info;// = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
+//struct mdns_info info;// = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
 
 #define RX_SOT '<' /* start of text for serial protocol */
 #define RX_EOT '>' /* end of text for serial protocol */
@@ -30,16 +30,18 @@ struct mdns_info info;// = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info
 #define ARRAY_OFST_WIFI_CFG 0 /* 0th byte in message array for wifi options */
 #define WIFICFG_IN_MSB true
 
-#define SSID_MAX_CHARS 32
-#define SSID_PW_MAX_CHARS 64
-#define ARRAY_OFST_SSID_CFG 14
-#define ARRAY_OFST_SSID_PW_CFG (ARRAY_OFST_SSID_CFG + 16)
+#define SSID_MAX_CHARS 32u
+#define SSID_PW_MAX_CHARS 64u
+//#define ARRAY_OFST_SSID_CFG 14
+//#define ARRAY_OFST_SSID_PW_CFG (ARRAY_OFST_SSID_CFG + 16)
 
 #define SZ_NODE_PREFIX "vinci_"
-static char my_nodename[SSID_MAX_CHARS];
+//static char my_nodename[SSID_MAX_CHARS];
 static char join_ssid[SSID_MAX_CHARS+1]; // max + a null byte for sys usage
 static char join_ssid_pw[SSID_PW_MAX_CHARS+1]; // max + a null byte for internal use
 
+/* this structure reflects wifi config byte of BMS->ESP communication */
+#if 0
 typedef union {
     struct __attribute__((packed)) {
         unsigned dev_num : 7;
@@ -47,6 +49,22 @@ typedef union {
     };
     uint8_t byte;
 } dev_wifi_cfg_t;
+/* We get these two options from BMS for AP v. STA mode */
+#define MSG_DEVMODE_STATION 0
+#define MSG_DEVMODE_AP 1
+#endif
+typedef union {
+    uint8_t changing_wifi_mode;
+    struct __attribute__((packed)) {
+        unsigned ofst_or_chan : 7;
+        unsigned sending_ssid : 1; // sending SSID means we station joining SSID
+    };
+} bms_wifi_cfg_t;
+#define BMS_MSG_DEVMODE_STA 1 // .sending_ssid is flagged basically
+#define BMS_MSG_DEVMODE_AP  0
+
+
+
 
 enum sys_wifi_mode {
     WM_NULL_MODE,   // NULL
@@ -67,14 +85,10 @@ static struct station_config stconf; // Station setup struct
 static os_timer_t raTimer;
 static os_timer_t rstTimer;
 
-
-/* We get these two options from BMS for AP v. STA mode */
-#define MSG_DEVMODE_STATION 0
-#define MSG_DEVMODE_AP 1
-
 uint8_t static hexchar_to_nyb(uint8_t);
 void static convert_rx_to_bin_and_store(uint8_t *, uint8_t);
 static void ICACHE_FLASH_ATTR bms_wifi_sta_connect(void);
+void ICACHE_FLASH_ATTR bms_wifi_cfg_update(void);
 
 static void ICACHE_FLASH_ATTR rstTimerCb(void *arg);
 static void ICACHE_FLASH_ATTR raTimerCb(void *arg);
@@ -190,152 +204,59 @@ void
 ICACHE_FLASH_ATTR
 bms_wifi_cfg_update(void)
 {
-    uint8_t cur_mode, msg_mode;
+//    uint8_t cur_mode, msg_mode;
     struct softap_config c;
-    dev_wifi_cfg_t wifi_mode_msg;
 
-    /* Check that we have some elements in memory before
-     * looking for a difference in configuration. */
-    if(! (actual_numel[the_good_buffer] > ARRAY_OFST_WIFI_CFG)) {
-        /* not enough data yet */
+    bms_wifi_cfg_t bwc;
+    bwc.changing_wifi_mode = (uint8_t)(param_values[the_good_buffer][ARRAY_OFST_WIFI_CFG] >> 8);
+    if(bwc.changing_wifi_mode == 0) { // zero indicates no change
+        printf("No mode change req.");
         return;
     }
 
-    cur_mode = wifi_get_opmode(); // get current wifi setup info
-    wifi_mode_msg.byte = (uint8_t) (param_values[the_good_buffer][ARRAY_OFST_WIFI_CFG] >> 8);
+    if(bwc.sending_ssid != 0) { // force chg to STAtion mode, look for SSID to join
 
-    /* create standard name for SSID or hostname use based on received batt_number */
-    sprintf(my_nodename, SZ_NODE_PREFIX "%d", wifi_mode_msg.dev_num);
-    msg_mode = wifi_mode_msg.dev_mode;
+        printf("\nstation plz.\n");
 
-    /* convert from msg binary code for mode to system mode code */
-    if(msg_mode == MSG_DEVMODE_STATION) {
-        msg_mode = WM_STATION_MODE;
-    } else {
-        msg_mode = WM_SOFTAP_MODE;
-    }
+        // ensure the offset to read SSID from actually came thru in msg
+        if(bwc.ofst_or_chan > actual_numel[the_good_buffer]) {
+            printf("Skipping SSID join, actual numel is %d, but offset is %d\n", actual_numel[the_good_buffer], bwc.ofst_or_chan);
+            return;
+        }
 
-    /* see if hw is in different mode currently than we want cfg'd */
-    if(cur_mode != msg_mode) { // || param_values[1][0] != param_values[0][0]) {
+        char *ssid_begin, *pw_begin;
+        ssid_begin = (char *) &param_values[the_good_buffer][bwc.ofst_or_chan];
+        pw_begin   = (char *) &param_values[the_good_buffer][bwc.ofst_or_chan+(SSID_MAX_CHARS / 2)];
 
-        printf("cur_mode .NE. msg_mode...\n");
+        printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
+        strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
+        strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
+        join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (@ index 32)
+        join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case (id)
 
-        if(msg_mode == WM_STATION_MODE) {
-
-            /* change to station mode if not busy trying already */
-            if(sta_connect_status == CONNTRY_IDLE) {
-
-                printf("station connect idle, try connect...\n");
-                bms_wifi_sta_connect();
-            }
-
-        } else { /* Soft AP mode */
-
-            printf("softAP mode plz.  ");
-
-            /* Try get AP config details */
-            if(wifi_softap_get_config(&c)) {
-                printf("softAP:got config.  ");
-                /* if it looks like current AP network name doesn't
-                 * resemble our custom one... */
-                if(strncmp((char *)c.ssid, my_nodename, SSID_MAX_CHARS)) {
-                    /* copy our ssid to config struct */
-                    strncpy((char *)c.ssid, my_nodename, 10); // 10 bytes appears to be max held by this chip
-                    printf("softAP: set config/SSID. Nodename: '%s'\n", my_nodename);
-                    c.ssid_len = strlen(my_nodename);
-
-                    /* set config */
-                    wifi_softap_set_config(&c);
-
-                    wifi_set_opmode(WM_SOFTAP_MODE);
-                    /* restart wifi */
-                    system_restart();
-                } else {
-                    /* get out of hybrid AP?STA mode, and into soft AP only */
-                    wifi_set_opmode(WM_SOFTAP_MODE);
-                    /* restart wifi */
-                    system_restart();
-                }
-            }
-            printf("\n");
-        }//end softap mode change
-    }
-
-
-    char *ssid_begin, *pw_begin;
-    ssid_begin = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_CFG];
-    pw_begin   = (char *) &param_values[the_good_buffer][ARRAY_OFST_SSID_PW_CFG];
-
-
-    if(actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG) {
-        join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
-        join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
-        printf("\nrx: ssid '%s' pw '%s'\n\n", ssid_begin, pw_begin);
-    }
-
-    /* do station mode adjustments */
-    if(cur_mode == msg_mode && cur_mode == WM_STATION_MODE) {
-
-        // All 32words / 64 byte of PW, nul padded if necessary, must be sent to be valid
-        if((actual_numel[the_good_buffer] >= ARRAY_OFST_SSID_PW_CFG)){// + SSID_PW_MAX_CHARS/2)) {
-            strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
-            strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
-            join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (see variable declaration about buffer size)
-            join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case
-
-            printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
-
-            // reconnect to new SSID although we was Station already :x
+        /* change to station mode if not busy trying already */
+        if(sta_connect_status == CONNTRY_IDLE) {
+            printf("station connect idle, try connect...\n");
             bms_wifi_sta_connect();
-
-        } else {
-    //        printf("actual numel: %d", actual_numel[the_good_buffer]);
         }
 
+    } else { // become soft AP
+        printf("softAP mode plz.  ");
+        /* Try get AP config details */
+        if(wifi_softap_get_config(&c)) {
+            printf("softAP:got config. ");
 
+            // adjust config
+            c.channel = bwc.ofst_or_chan; // assign desired wifi channel
 
-
-
-
-
-#if 0
-        char *hn;
-        hn = wifi_station_get_hostname();
-        printf("sta: chekcing hostname. is '%s'.\n", wifi_station_get_hostname());
-        if(hn != NULL && !strncmp(hn, my_nodename, strlen(my_nodename))) {
-            printf("hostname already set %s\n", my_nodename);
-        } else {
-            printf("set hostname '%s' ...", my_nodename);
-            if(wifi_station_set_hostname(my_nodename))
-                printf("successs!\n");
-            else
-                printf("fail !\n");
+            /* set softAP config */
+            wifi_softap_set_config(&c);
+            /* change major mode */
+            wifi_set_opmode(WM_SOFTAP_MODE);
+            /* restart wifi */
+            system_restart();
         }
-#else
-
-    once = 1; // no go now
-    if(once != 1){
-
-        wifi_get_ip_info(STATION_IF, &ipconfig);
-        if(ipconfig.ip.addr == 0l) { once = 0;
-        } else {
-            once = 1;
-
-            info.host_name = "espress";
-            info.ipAddr = ipconfig.ip.addr; //station ip
-
-            info.server_name = "espLux";
-            info.server_port = 80;
-            info.txt_data[0] = "ver0.1";
-            info.txt_data[1] = NULL;
-            espconn_mdns_init(&info);
-        }
-
     }
-
-#endif
-    }
-
 
     return;
 }
@@ -393,7 +314,7 @@ bms_wifi_sta_connect(void)
 /* start trying to connect to an access point */
 {
     sta_connect_status = CONNTRY_WORKING;
-    printf("Saving station values...\n");
+    printf("Saving station values to stconf...\n");
     strncpy((char *)stconf.ssid, join_ssid, sizeof(join_ssid) - 1); // need zero termination string for OS
     strncpy((char *)stconf.password, join_ssid_pw, sizeof(join_ssid_pw)); // need zero term str
     stconf.bssid_set = false; // see user_interface.h for more info
