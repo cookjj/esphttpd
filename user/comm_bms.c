@@ -214,6 +214,8 @@ bms_wifi_cfg_update(void)
         return;
     }
 
+    printf("cmd byte is %02x with sending_ssid .eq. %d and else %d\n", bwc.changing_wifi_mode, bwc.sending_ssid, bwc.ofst_or_chan);
+
     if(bwc.sending_ssid != 0) { // force chg to STAtion mode, look for SSID to join
 
         printf("\nstation plz.\n");
@@ -228,23 +230,23 @@ bms_wifi_cfg_update(void)
         ssid_begin = (char *) &param_values[the_good_buffer][bwc.ofst_or_chan];
         pw_begin   = (char *) &param_values[the_good_buffer][bwc.ofst_or_chan+(SSID_MAX_CHARS / 2)];
 
-        printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
-        strncpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
-        strncpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
+        memcpy(join_ssid, ssid_begin, SSID_MAX_CHARS);
+        memcpy(join_ssid_pw, pw_begin, SSID_PW_MAX_CHARS);
         join_ssid[SSID_MAX_CHARS] = 0; // null terminate last position (@ index 32)
         join_ssid_pw[SSID_PW_MAX_CHARS] = 0; // null terminate just in case (id)
+        printf("saving in RAM the SSID: '%s' w/ pw '%s'\n", join_ssid, join_ssid_pw); 
 
         /* change to station mode if not busy trying already */
-        if(sta_connect_status == CONNTRY_IDLE) {
+        //if(sta_connect_status == CONNTRY_IDLE) {
             printf("station connect idle, try connect...\n");
-            bms_wifi_sta_connect();
-        }
+            bms_wifi_sta_connect(); // makes use of arrays 'join_ssid'
+        //}
 
     } else { // become soft AP
         printf("softAP mode plz.  ");
         /* Try get AP config details */
         if(wifi_softap_get_config(&c)) {
-            printf("softAP:got config. ");
+            printf("softAP:got config. Make channel %d\n", bwc.ofst_or_chan);
 
             // adjust config
             c.channel = bwc.ofst_or_chan; // assign desired wifi channel
@@ -315,8 +317,8 @@ bms_wifi_sta_connect(void)
 {
     sta_connect_status = CONNTRY_WORKING;
     printf("Saving station values to stconf...\n");
-    strncpy((char *)stconf.ssid, join_ssid, sizeof(join_ssid) - 1); // need zero termination string for OS
-    strncpy((char *)stconf.password, join_ssid_pw, sizeof(join_ssid_pw)); // need zero term str
+    memcpy((char *)stconf.ssid, join_ssid, 32); // need zero termination string for OS
+    memcpy((char *)stconf.password, join_ssid_pw, 64);// need zero term str
     stconf.bssid_set = false; // see user_interface.h for more info
 
     //Schedule disconnect/connect
@@ -337,6 +339,7 @@ bms_rx_data(uint8_t *data, int len)
 
     uint8_t i;
     for(i = 0; i < len; i++) {
+        printf("%c", data[i]);
         if(data[i] == RX_SOT) {
             // Reset everything on SOT
             rx_idx = 0;
@@ -373,7 +376,7 @@ bms_rx_data(uint8_t *data, int len)
                     // Out of range for ascii hex, ignore it.
                 }
             } else { // got end of text, this must be check byte
-                //printf("BMS: Getting check byte");
+                printf("BMS: Getting check byte");
 
                 if(data[i] == check) { // and good check sum
                     // convert ascii to binary and copy from rx_buf

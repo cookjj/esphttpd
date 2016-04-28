@@ -4,12 +4,12 @@
 # 'ota' - Combined firmware blob with OTA upgrades.
 #Please do a 'make clean' after changing this.
 #OUTPUT_TYPE=separate
-#OUTPUT_TYPE=combined
-OUTPUT_TYPE=ota
+OUTPUT_TYPE=combined    #jjc new choice
+#OUTPUT_TYPE=ota        #jjc this was default before
 
 #SPI flash size, in K
-#jjc: changed SPI size to reflect larger mem on Olimex ESP board.
-ESP_SPI_FLASH_SIZE_K=2048
+#ESP_SPI_FLASH_SIZE_K=2048 #jjc: changed SPI size to reflect larger mem on Olimex ESP board.
+ESP_SPI_FLASH_SIZE_K=1024 #jjc Think it fits in 1024
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
 ESP_FLASH_MODE=0
 #0: 40MHz, 1: 26MHz, 2: 20MHz, 0xf: 80MHz
